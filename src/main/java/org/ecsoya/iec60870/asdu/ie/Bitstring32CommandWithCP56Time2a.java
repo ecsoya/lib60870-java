@@ -27,7 +27,7 @@ public class Bitstring32CommandWithCP56Time2a extends Bitstring32Command {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 4; /* bitstring */
@@ -44,24 +44,20 @@ public class Bitstring32CommandWithCP56Time2a extends Bitstring32Command {
 		this.timestamp = timestamp;
 	}
 
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.appendBytes(this.timestamp.getEncodedValue());
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
 	 * @see org.ecsoya.iec60870.asdu.ie.Bitstring32Command#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 11;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.Bitstring32Command#getType()
-	 */
-	@Override
-	public TypeID getType() {
-		return TypeID.C_BO_TA_1;
 	}
 
 	/*
@@ -74,10 +70,14 @@ public class Bitstring32CommandWithCP56Time2a extends Bitstring32Command {
 		return false;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.Bitstring32Command#getType()
+	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.appendBytes(this.timestamp.getEncodedValue());
+	public TypeID getType() {
+		return TypeID.C_BO_TA_1;
 	}
 
 }

@@ -72,70 +72,6 @@ public class CS101Slave extends Slave
 	};
 
 	/********************************************
-	 * IASDUSender
-	 ********************************************/
-
-	public final void SendACT_CON(ASDU asdu, boolean negative) {
-		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
-		asdu.setNegative(negative);
-
-		SendASDU(asdu);
-	}
-
-	public final void SendACT_TERM(ASDU asdu) {
-		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_TERMINATION);
-		asdu.setNegative(false);
-
-		SendASDU(asdu);
-	}
-
-	public final ApplicationLayerParameters GetApplicationLayerParameters() {
-		return parameters;
-	}
-
-	/********************************************
-	 * ISecondaryApplicationLayer
-	 ********************************************/
-
-	public final boolean IsClass1DataAvailable() {
-		return IsUserDataClass1Available();
-	}
-
-	public final BufferFrame GetClass1Data() {
-		return DequeueUserDataClass1();
-	}
-
-	public final BufferFrame GetCLass2Data() {
-		BufferFrame asdu = DequeueUserDataClass2();
-
-		if (asdu == null) {
-			asdu = DequeueUserDataClass1();
-		}
-
-		return asdu;
-	}
-
-	public final boolean HandleReceivedData(byte[] msg, boolean isBroadcast, int userDataStart, int userDataLength) {
-		try {
-			return HandleApplicationLayer(0, msg, userDataStart, userDataLength);
-		} catch (ASDUParsingException e) {
-
-			e.printStackTrace();
-			return false;
-		}
-	}
-
-	public final void ResetCUReceived(boolean onlyFcb) {
-		// TODO delete data queues
-		synchronized (userDataClass1Queue) {
-			userDataClass1Queue.clear();
-		}
-		synchronized (userDataClass2Queue) {
-			userDataClass2Queue.clear();
-		}
-	}
-
-	/********************************************
 	 * END ISecondaryApplicationLayer
 	 ********************************************/
 
@@ -143,135 +79,72 @@ public class CS101Slave extends Slave
 
 	private LinkLayer linkLayer = null;
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte[] buffer = new byte[300];
 	private byte[] buffer = new byte[300];
+
 	private SerialPort port = null;
+
 	private boolean running = false;
+
 	private LinkLayerParameters linkLayerParameters;
+
 	private LinkLayerMode linkLayerMode = LinkLayerMode.UNBALANCED;
 
 	private PrimaryLinkLayerBalanced primaryLinkLayerBalanced = null;
 
 	private int linkLayerAddress = 0;
+
 	private int linkLayerAddressOtherStation; // link layer address of other station in balanced mode
 
 	private LinkedList<BufferFrame> userDataClass1Queue = new LinkedList<BufferFrame>();
 	private int userDataClass1QueueMaxSize = 100;
-
 	private LinkedList<BufferFrame> userDataClass2Queue = new LinkedList<BufferFrame>();
 	private int userDataClass2QueueMaxSize = 100;
-
 	private SerialTransceiverFT12 transceiver;
 
 	private FileServer fileServer;
 
 	private boolean initialized;
-
 	private ApplicationLayerParameters parameters = new ApplicationLayerParameters();
 
-	/**
-	 * Gets or sets the application layer parameters-
-	 * 
-	 * Should be set before starting the communication <value>application layer
-	 * parameters.</value>
-	 */
-	public final ApplicationLayerParameters getParameters() {
-		return this.parameters;
+	/// <summary>
+	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
+	/// class.
+	/// </summary>
+	/// <param name="port">serial port instance</param>
+	/// <param name="parameters">link layer parameters</param>
+	public CS101Slave(SerialPort port, LinkLayerParameters parameters) {
+		this.port = port;
+
+		linkLayerParameters = parameters;
+
+		if (linkLayerParameters == null)
+			linkLayerParameters = new LinkLayerParameters();
+
+		transceiver = new SerialTransceiverFT12(port, linkLayerParameters, DebugLog);
+
+		initialized = false;
+
+		fileServer = new FileServer(this, getAvailableFiles(), DebugLog);
 	}
 
-	public final void setParameters(ApplicationLayerParameters value) {
-		parameters = value;
-	}
+	/// <summary>
+	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
+	/// class.
+	/// </summary>
+	/// <param name="serialStream">A stream instance (e.g.
+	/// TcpClientVirtualSerialPort or TcpServerVirtualSerialPort.</param>
+	/// <param name="parameters">link layer parameters</param>
+	public CS101Slave(SerialStream serialStream, LinkLayerParameters parameters) {
+		linkLayerParameters = parameters;
 
-	/**
-	 * Gets or sets the direction bit value used for balanced mode (default is
-	 * false)
-	 * 
-	 * <value><c>true</c> if DIR is set otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getDIR() {
-		return linkLayer.isDir();
-	}
+		if (linkLayerParameters == null)
+			linkLayerParameters = new LinkLayerParameters();
 
-	public final void setDIR(boolean value) {
-		linkLayer.setDir(value);
-	}
+		transceiver = new SerialTransceiverFT12(serialStream, linkLayerParameters, DebugLog);
 
-	/**
-	 * Gets or sets the link layer mode (balanced or unbalanced).
-	 * 
-	 * <value>The link layer mode.</value>
-	 */
-	public final LinkLayerMode getLinkLayerMode() {
-		return this.linkLayerMode;
-	}
+		initialized = false;
 
-	public final void setLinkLayerMode(LinkLayerMode value) {
-		if (initialized == false) {
-			linkLayerMode = value;
-		}
-	}
-
-	/**
-	 * Stops the receive message loop
-	 */
-	public final void Stop() {
-		running = false;
-	}
-
-	public final boolean IsUserDataClass1Available() {
-		synchronized (userDataClass1Queue) {
-			if (!userDataClass1Queue.isEmpty()) {
-				return true;
-			} else {
-				return false;
-			}
-		}
-	}
-
-	/**
-	 * Sets the user data queue sizes. When the maximum size is reached the oldest
-	 * value will be deleted when a new ASDU is added
-	 * 
-	 * @param class1QueueSize Class 1 queue size.
-	 * @param class2QueueSize Class 2 queue size.
-	 */
-	public final void SetUserDataQueueSizes(int class1QueueSize, int class2QueueSize) {
-		userDataClass1QueueMaxSize = class1QueueSize;
-		userDataClass2QueueMaxSize = class2QueueSize;
-	}
-
-	/**
-	 * Determines whether the user data class 1 queue is full.
-	 * 
-	 * @return <c>true</c> if the queue is full; otherwise, <c>false</c>.
-	 */
-	public final boolean IsUserDataClass1QueueFull() {
-		return (userDataClass1Queue.size() == userDataClass1QueueMaxSize);
-	}
-
-	/**
-	 * Enqueues an ASDU into the class 1 queue (for events, command responses, and
-	 * other high-priority messages).
-	 * 
-	 * @param asdu ASDU to enqueue
-	 */
-	public final void EnqueueUserDataClass1(ASDU asdu) {
-		synchronized (userDataClass1Queue) {
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: BufferFrame frame = new BufferFrame(new byte[256], 0);
-			BufferFrame frame = new BufferFrame(new byte[256], 0);
-
-			asdu.encode(frame, parameters);
-
-			userDataClass1Queue.offer(frame);
-
-			while (userDataClass1Queue.size() > userDataClass1QueueMaxSize) {
-				userDataClass1Queue.poll();
-			}
-		}
+		fileServer = new FileServer(this, getAvailableFiles(), DebugLog);
 	}
 
 	public final BufferFrame DequeueUserDataClass1() {
@@ -285,23 +158,37 @@ public class CS101Slave extends Slave
 		}
 	}
 
-	public final boolean IsUserDataClass2Available() {
+	private BufferFrame
+
+			DequeueUserDataClass2() {
 		synchronized (userDataClass2Queue) {
-			if (!userDataClass2Queue.isEmpty()) {
-				return true;
-			} else {
-				return false;
-			}
+
+			if (userDataClass2Queue.size() > 0)
+				return userDataClass2Queue.pop();
+			else
+				return null;
 		}
 	}
 
-	/// <summary>
-	/// Determines whether the user data class 2 queue is full.
-	/// </summary>
-	/// <returns><c>true</c> if the queue is full; otherwise,
-	/// <c>false</c>.</returns>
-	public boolean IsUserDataClass2QueueFull() {
-		return (userDataClass2Queue.size() == userDataClass2QueueMaxSize);
+	/**
+	 * Enqueues an ASDU into the class 1 queue (for events, command responses, and
+	 * other high-priority messages).
+	 * 
+	 * @param asdu ASDU to enqueue
+	 */
+	public final void EnqueueUserDataClass1(ASDU asdu) {
+		synchronized (userDataClass1Queue) {
+
+			BufferFrame frame = new BufferFrame(new byte[256], 0);
+
+			asdu.encode(frame, parameters);
+
+			userDataClass1Queue.offer(frame);
+
+			while (userDataClass1Queue.size() > userDataClass1QueueMaxSize) {
+				userDataClass1Queue.poll();
+			}
+		}
 	}
 
 	/// <summary>
@@ -324,24 +211,36 @@ public class CS101Slave extends Slave
 		}
 	}
 
-	private BufferFrame
+	public final ApplicationLayerParameters getApplicationLayerParameters() {
+		return parameters;
+	}
 
-			DequeueUserDataClass2() {
-		synchronized (userDataClass2Queue) {
+	public final BufferFrame getClass1Data() {
+		return DequeueUserDataClass1();
+	}
 
-			if (userDataClass2Queue.size() > 0)
-				return userDataClass2Queue.pop();
-			else
-				return null;
+	public final BufferFrame getCLass2Data() {
+		BufferFrame asdu = DequeueUserDataClass2();
+
+		if (asdu == null) {
+			asdu = DequeueUserDataClass1();
 		}
+
+		return asdu;
+	}
+
+	/**
+	 * Gets or sets the direction bit value used for balanced mode (default is
+	 * false)
+	 * 
+	 * <value><c>true</c> if DIR is set otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getDIR() {
+		return linkLayer.isDir();
 	}
 
 	public int getLinkLayerAddress() {
 		return linkLayerAddress;
-	}
-
-	public void setLinkLayerAddress(int linkLayerAddress) {
-		this.linkLayerAddress = linkLayerAddress;
 	}
 
 	/// <summary>
@@ -353,61 +252,41 @@ public class CS101Slave extends Slave
 		return linkLayerAddressOtherStation;
 	}
 
-	public void setLinkLayerAddressOtherStation(int value) {
-		this.linkLayerAddressOtherStation = value;
-		if (primaryLinkLayerBalanced != null)
-			primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(value);
+	/**
+	 * Gets or sets the link layer mode (balanced or unbalanced).
+	 * 
+	 * <value>The link layer mode.</value>
+	 */
+	public final LinkLayerMode getLinkLayerMode() {
+		return this.linkLayerMode;
 	}
 
-	/// <summary>
-	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
-	/// class.
-	/// </summary>
-	/// <param name="port">serial port instance</param>
-	/// <param name="parameters">link layer parameters</param>
-	public CS101Slave(SerialPort port, LinkLayerParameters parameters) {
-		this.port = port;
-
-		linkLayerParameters = parameters;
-
-		if (linkLayerParameters == null)
-			linkLayerParameters = new LinkLayerParameters();
-
-		transceiver = new SerialTransceiverFT12(port, linkLayerParameters, DebugLog);
-
-		initialized = false;
-
-		fileServer = new FileServer(this, GetAvailableFiles(), DebugLog);
+	/**
+	 * Gets or sets the application layer parameters-
+	 * 
+	 * Should be set before starting the communication <value>application layer
+	 * parameters.</value>
+	 */
+	public final ApplicationLayerParameters getParameters() {
+		return this.parameters;
 	}
 
-	/// <summary>
-	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
-	/// class.
-	/// </summary>
-	/// <param name="serialStream">A stream instance (e.g.
-	/// TcpClientVirtualSerialPort or TcpServerVirtualSerialPort.</param>
-	/// <param name="parameters">link layer parameters</param>
-	public CS101Slave(SerialStream serialStream, LinkLayerParameters parameters) {
-		linkLayerParameters = parameters;
+	private Function<Void, BufferFrame> getUserData() {
+		return (v) -> {
+			if (IsUserDataClass1Available())
+				return DequeueUserDataClass1();
+			else if (IsUserDataClass2Available())
+				return DequeueUserDataClass2();
+			else
+				return null;
+		};
 
-		if (linkLayerParameters == null)
-			linkLayerParameters = new LinkLayerParameters();
-
-		transceiver = new SerialTransceiverFT12(serialStream, linkLayerParameters, DebugLog);
-
-		initialized = false;
-
-		fileServer = new FileServer(this, GetAvailableFiles(), DebugLog);
-	}
-
-	public void SendASDU(ASDU asdu) {
-		EnqueueUserDataClass1(asdu);
 	}
 
 	@Override
 	public boolean handle(int address, byte[] msg, int userDataStart, int userDataLength) {
 		try {
-			return HandleApplicationLayer(address, msg, userDataStart, userDataLength);
+			return handleApplicationLayer(address, msg, userDataStart, userDataLength);
 		} catch (ASDUParsingException e) {
 
 			e.printStackTrace();
@@ -415,7 +294,7 @@ public class CS101Slave extends Slave
 		}
 	}
 
-	public boolean HandleApplicationLayer(int address, byte[] msg, int userDataStart, int userDataLength)
+	public boolean handleApplicationLayer(int address, byte[] msg, int userDataStart, int userDataLength)
 			throws ASDUParsingException {
 
 		ASDU asdu;
@@ -446,7 +325,7 @@ public class CS101Slave extends Slave
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -462,12 +341,12 @@ public class CS101Slave extends Slave
 					CounterInterrogationCommand cic = (CounterInterrogationCommand) asdu.getElement(0);
 
 					if (this.counterInterrogationHandler.invoke(this.counterInterrogationHandlerParameter, this, asdu,
-							cic.getQCC()))
+							cic.getQualifier()))
 						messageHandled = true;
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -490,7 +369,7 @@ public class CS101Slave extends Slave
 
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -512,7 +391,7 @@ public class CS101Slave extends Slave
 
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -526,7 +405,7 @@ public class CS101Slave extends Slave
 			else
 				asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
 
-			this.SendASDU(asdu);
+			this.sendASDU(asdu);
 
 			messageHandled = true;
 
@@ -548,7 +427,7 @@ public class CS101Slave extends Slave
 
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -569,7 +448,7 @@ public class CS101Slave extends Slave
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				this.SendASDU(asdu);
+				this.sendASDU(asdu);
 			}
 
 			break;
@@ -577,7 +456,7 @@ public class CS101Slave extends Slave
 		}
 
 		if (messageHandled == false)
-			messageHandled = fileServer.HandleFileAsdu(asdu);
+			messageHandled = fileServer.handleFileAsdu(asdu);
 
 		if ((messageHandled == false) && (this.asduHandler != null))
 			if (this.asduHandler.invoke(this.asduHandlerParameter, this, asdu))
@@ -585,63 +464,66 @@ public class CS101Slave extends Slave
 
 		if (messageHandled == false) {
 			asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_TYPE_ID);
-			this.SendASDU(asdu);
+			this.sendASDU(asdu);
 		}
 
 		return true;
 	}
 
-	private Function<Void, BufferFrame> GetUserData() {
-		return (v) -> {
-			if (IsUserDataClass1Available())
-				return DequeueUserDataClass1();
-			else if (IsUserDataClass2Available())
-				return DequeueUserDataClass2();
-			else
-				return null;
-		};
+	public final boolean handleReceivedData(byte[] msg, boolean isBroadcast, int userDataStart, int userDataLength) {
+		try {
+			return handleApplicationLayer(0, msg, userDataStart, userDataLength);
+		} catch (ASDUParsingException e) {
 
-	}
-
-	/// <summary>
-	/// Sends a link layer test function.
-	/// </summary>
-	public void SendLinkLayerTestFunction() {
-		linkLayer.SendTestFunction();
-	}
-
-	/// <summary>
-	/// Run a the message receiver and state machines once. Can be used if no
-	/// threads should be used.
-	/// </summary>
-	public void Run() {
-		if (initialized == false) {
-
-			linkLayer = new LinkLayer(buffer, linkLayerParameters, transceiver, DebugLog);
-			linkLayer.setLinkLayerMode(linkLayerMode);
-
-			if (linkLayerMode == LinkLayerMode.BALANCED) {
-
-				PrimaryLinkLayerBalanced primaryLinkLayerBalanced = new PrimaryLinkLayerBalanced(linkLayer,
-						GetUserData(), DebugLog);
-				primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(linkLayerAddressOtherStation);
-
-				linkLayer.SetPrimaryLinkLayer(primaryLinkLayerBalanced);
-
-				linkLayer.SetSecondaryLinkLayer(
-						new SecondaryLinkLayerBalanced(linkLayer, linkLayerAddressOtherStation, this, DebugLog));
-			} else {
-				linkLayer.SetSecondaryLinkLayer(
-						new SecondaryLinkLayerUnbalanced(linkLayer, linkLayerAddress, this, DebugLog));
-			}
-
-			initialized = true;
+			e.printStackTrace();
+			return false;
 		}
+	}
 
-		if (fileServer != null)
-			fileServer.HandleFileTransmission();
+	/********************************************
+	 * ISecondaryApplicationLayer
+	 ********************************************/
 
-		linkLayer.Run();
+	public final boolean isClass1DataAvailable() {
+		return IsUserDataClass1Available();
+	}
+
+	public final boolean IsUserDataClass1Available() {
+		synchronized (userDataClass1Queue) {
+			if (!userDataClass1Queue.isEmpty()) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	/**
+	 * Determines whether the user data class 1 queue is full.
+	 * 
+	 * @return <c>true</c> if the queue is full; otherwise, <c>false</c>.
+	 */
+	public final boolean IsUserDataClass1QueueFull() {
+		return (userDataClass1Queue.size() == userDataClass1QueueMaxSize);
+	}
+
+	public final boolean IsUserDataClass2Available() {
+		synchronized (userDataClass2Queue) {
+			if (!userDataClass2Queue.isEmpty()) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Determines whether the user data class 2 queue is full.
+	/// </summary>
+	/// <returns><c>true</c> if the queue is full; otherwise,
+	/// <c>false</c>.</returns>
+	public boolean IsUserDataClass2QueueFull() {
+		return (userDataClass2Queue.size() == userDataClass2QueueMaxSize);
 	}
 
 	/// <summary>
@@ -649,7 +531,7 @@ public class CS101Slave extends Slave
 	/// </summary>
 	/// It is best to be started in a separate thread.
 	/// The loop can be stopped with the Stop method.
-	public void ReceiveMessageLoop() {
+	public void receiveMessageLoop() {
 //		running = true;
 //
 //		if (port != null) {
@@ -665,6 +547,122 @@ public class CS101Slave extends Slave
 //
 //		if (port != null)
 //			port.Close();
+	}
+
+	public final void resetCUReceived(boolean onlyFcb) {
+		// TODO delete data queues
+		synchronized (userDataClass1Queue) {
+			userDataClass1Queue.clear();
+		}
+		synchronized (userDataClass2Queue) {
+			userDataClass2Queue.clear();
+		}
+	}
+
+	/// <summary>
+	/// Run a the message receiver and state machines once. Can be used if no
+	/// threads should be used.
+	/// </summary>
+	public void run() {
+		if (initialized == false) {
+
+			linkLayer = new LinkLayer(buffer, linkLayerParameters, transceiver, DebugLog);
+			linkLayer.setLinkLayerMode(linkLayerMode);
+
+			if (linkLayerMode == LinkLayerMode.BALANCED) {
+
+				PrimaryLinkLayerBalanced primaryLinkLayerBalanced = new PrimaryLinkLayerBalanced(linkLayer,
+						getUserData(), DebugLog);
+				primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(linkLayerAddressOtherStation);
+
+				linkLayer.SetPrimaryLinkLayer(primaryLinkLayerBalanced);
+
+				linkLayer.SetSecondaryLinkLayer(
+						new SecondaryLinkLayerBalanced(linkLayer, linkLayerAddressOtherStation, this, DebugLog));
+			} else {
+				linkLayer.SetSecondaryLinkLayer(
+						new SecondaryLinkLayerUnbalanced(linkLayer, linkLayerAddress, this, DebugLog));
+			}
+
+			initialized = true;
+		}
+
+		if (fileServer != null)
+			fileServer.handleFileTransmission();
+
+		linkLayer.run();
+	}
+
+	/********************************************
+	 * IASDUSender
+	 ********************************************/
+
+	public final void sendACT_CON(ASDU asdu, boolean negative) {
+		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
+		asdu.setNegative(negative);
+
+		sendASDU(asdu);
+	}
+
+	public final void sendACT_TERM(ASDU asdu) {
+		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_TERMINATION);
+		asdu.setNegative(false);
+
+		sendASDU(asdu);
+	}
+
+	public void sendASDU(ASDU asdu) {
+		EnqueueUserDataClass1(asdu);
+	}
+
+	/// <summary>
+	/// Sends a link layer test function.
+	/// </summary>
+	public void sendLinkLayerTestFunction() {
+		linkLayer.sendTestFunction();
+	}
+
+	public final void setDIR(boolean value) {
+		linkLayer.setDir(value);
+	}
+
+	public void setLinkLayerAddress(int linkLayerAddress) {
+		this.linkLayerAddress = linkLayerAddress;
+	}
+
+	public void setLinkLayerAddressOtherStation(int value) {
+		this.linkLayerAddressOtherStation = value;
+		if (primaryLinkLayerBalanced != null)
+			primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(value);
+	}
+
+	public final void setLinkLayerMode(LinkLayerMode value) {
+		if (initialized == false) {
+			linkLayerMode = value;
+		}
+	}
+
+	public final void setParameters(ApplicationLayerParameters value) {
+		parameters = value;
+	}
+
+	/**
+	 * Sets the user data queue sizes. When the maximum size is reached the oldest
+	 * value will be deleted when a new ASDU is added
+	 * 
+	 * @param class1QueueSize Class 1 queue size.
+	 * @param class2QueueSize Class 2 queue size.
+	 */
+	public final void SetUserDataQueueSizes(int class1QueueSize, int class2QueueSize) {
+		userDataClass1QueueMaxSize = class1QueueSize;
+		userDataClass2QueueMaxSize = class2QueueSize;
+	}
+
+	/**
+	 * Stops the receive message loop
+	 */
+	public final void Stop() {
+		running = false;
 	}
 
 }

@@ -38,44 +38,20 @@ import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
  */
 
 public class MeasuredValueNormalizedWithoutQuality extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 2;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ME_ND_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private ScaledValue scaledValue;
 
-	public final short getRawValue() {
-		return scaledValue.getShortValue();
-	}
-
-	public final void setRawValue(short value) {
-		scaledValue.setShortValue(value);
-	}
-
-	public final float getNormalizedValue() {
-		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
-	}
-
-	public final void setNormalizedValue(float value) {
-		/* Check value range */
-		if (value > 1.0f) {
-			value = 1.0f;
-		} else if (value < -1.0f) {
-			value = -1.0f;
+	public MeasuredValueNormalizedWithoutQuality(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
+			boolean isSequence) throws ASDUParsingException {
+		super(parameters, msg, startIndex, isSequence);
+		if (!isSequence) {
+			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		this.scaledValue.setValue((int) ((value * 32767.5) - 0.5));
+		if ((msg.length - startIndex) < getEncodedSize()) {
+			throw new ASDUParsingException("Message too small");
+		}
+
+		scaledValue = new ScaledValue(msg, startIndex);
 	}
 
 	public MeasuredValueNormalizedWithoutQuality(int objectAddress, float normalizedValue) {
@@ -89,26 +65,48 @@ public class MeasuredValueNormalizedWithoutQuality extends InformationObject {
 		this.scaledValue = new ScaledValue(rawValue);
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal MeasuredValueNormalizedWithoutQuality(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
-	public MeasuredValueNormalizedWithoutQuality(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
-			boolean isSequence) throws ASDUParsingException {
-		super(parameters, msg, startIndex, isSequence);
-		if (!isSequence) {
-			startIndex += parameters.getSizeOfIOA(); // skip IOA
-		}
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
-			throw new ASDUParsingException("Message too small");
-		}
-
-		scaledValue = new ScaledValue(msg, startIndex);
+		frame.appendBytes(scaledValue.getEncodedValue());
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public int getEncodedSize() {
+		return 2;
+	}
 
-		frame.appendBytes(scaledValue.GetEncodedValue());
+	public final float getNormalizedValue() {
+		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
+	}
+
+	public final short getRawValue() {
+		return scaledValue.getShortValue();
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ME_ND_1;
+	}
+
+	public final void setNormalizedValue(float value) {
+		/* Check value range */
+		if (value > 1.0f) {
+			value = 1.0f;
+		} else if (value < -1.0f) {
+			value = -1.0f;
+		}
+
+		this.scaledValue.setValue((int) ((value * 32767.5) - 0.5));
+	}
+
+	public final void setRawValue(short value) {
+		scaledValue.setShortValue(value);
 	}
 }

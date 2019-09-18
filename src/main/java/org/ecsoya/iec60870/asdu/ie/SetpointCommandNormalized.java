@@ -36,50 +36,23 @@ import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
  */
 
 public class SetpointCommandNormalized extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.C_SE_NA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private ScaledValue scaledValue;
-
-	public final short getRawValue() {
-		return scaledValue.getShortValue();
-	}
-
-	public final void setRawValue(short value) {
-		scaledValue.setShortValue(value);
-	}
-
-	public final float getNormalizedValue() {
-		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
-	}
-
-	public final void setNormalizedValue(float value) {
-		/* Check value range */
-		if (value > 1.0f) {
-			value = 1.0f;
-		} else if (value < -1.0f) {
-			value = -1.0f;
-		}
-
-		this.scaledValue.setValue((int) ((value * 32767.5) - 0.5));
-	}
 
 	private SetpointCommandQualifier qos;
 
-	public final SetpointCommandQualifier getQOS() {
-		return qos;
+	public SetpointCommandNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
+			throws ASDUParsingException {
+		super(parameters, msg, startIndex, false);
+		startIndex += parameters.getSizeOfIOA(); // skip IOA
+
+		if ((msg.length - startIndex) < getEncodedSize()) {
+			throw new ASDUParsingException("Message too small");
+		}
+
+		scaledValue = new ScaledValue(msg, startIndex);
+		startIndex += 2;
+
+		this.qos = new SetpointCommandQualifier(msg[startIndex++]);
 	}
 
 	public SetpointCommandNormalized(int objectAddress, float value, SetpointCommandQualifier qos) {
@@ -94,29 +67,54 @@ public class SetpointCommandNormalized extends InformationObject {
 		this.qos = qos;
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal SetpointCommandNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
-	public SetpointCommandNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
-			throws ASDUParsingException {
-		super(parameters, msg, startIndex, false);
-		startIndex += parameters.getSizeOfIOA(); // skip IOA
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
-			throw new ASDUParsingException("Message too small");
-		}
+		frame.appendBytes(scaledValue.getEncodedValue());
 
-		scaledValue = new ScaledValue(msg, startIndex);
-		startIndex += 2;
-
-		this.qos = new SetpointCommandQualifier(msg[startIndex++]);
+		frame.setNextByte(this.qos.GetEncodedValue());
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public int getEncodedSize() {
+		return 3;
+	}
 
-		frame.appendBytes(scaledValue.GetEncodedValue());
+	public final float getNormalizedValue() {
+		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
+	}
 
-		frame.setNextByte(this.qos.GetEncodedValue());
+	public final SetpointCommandQualifier getQOS() {
+		return qos;
+	}
+
+	public final short getRawValue() {
+		return scaledValue.getShortValue();
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.C_SE_NA_1;
+	}
+
+	public final void setNormalizedValue(float value) {
+		/* Check value range */
+		if (value > 1.0f) {
+			value = 1.0f;
+		} else if (value < -1.0f) {
+			value = -1.0f;
+		}
+
+		this.scaledValue.setValue((int) ((value * 32767.5) - 0.5));
+	}
+
+	public final void setRawValue(short value) {
+		scaledValue.setShortValue(value);
 	}
 }

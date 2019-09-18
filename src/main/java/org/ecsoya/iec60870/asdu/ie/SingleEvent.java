@@ -13,38 +13,32 @@ public class SingleEvent {
 		this.qdp = new QualityDescriptorP();
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public SingleEvent(byte encodedValue)
 	public SingleEvent(byte encodedValue) {
 		this.eventState = EventState.forValue(encodedValue & 0x03);
 
 		this.qdp = new QualityDescriptorP(encodedValue);
 	}
 
-	public final EventState getState() {
-		return eventState;
-	}
+	public final byte getEncodedValue() {
+		byte encodedValue = (byte) ((qdp.getEncodedValue() & 0xfc) + eventState.getValue());
 
-	public final void setState(EventState value) {
-		eventState = value;
+		return encodedValue;
 	}
 
 	public final QualityDescriptorP getQDP() {
 		return qdp;
 	}
 
+	public final EventState getState() {
+		return eventState;
+	}
+
 	public final void setQDP(QualityDescriptorP value) {
 		qdp = value;
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte getEncodedValue()
-	public final byte getEncodedValue() {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: byte encodedValue = (byte)((qdp.EncodedValue & 0xfc) + (int) eventState);
-		byte encodedValue = (byte) ((qdp.getEncodedValue() & 0xfc) + eventState.getValue());
-
-		return encodedValue;
+	public final void setState(EventState value) {
+		eventState = value;
 	}
 
 }

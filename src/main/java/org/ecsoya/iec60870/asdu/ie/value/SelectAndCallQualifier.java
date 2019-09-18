@@ -12,8 +12,11 @@ public enum SelectAndCallQualifier {
 
 	public static final int SIZE = java.lang.Byte.SIZE;
 
-	private byte byteValue;
 	private static java.util.HashMap<Byte, SelectAndCallQualifier> mappings;
+
+	public static SelectAndCallQualifier forValue(byte value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Byte, SelectAndCallQualifier> getMappings() {
 		if (mappings == null) {
@@ -26,6 +29,8 @@ public enum SelectAndCallQualifier {
 		return mappings;
 	}
 
+	private byte byteValue;
+
 	private SelectAndCallQualifier(byte value) {
 		byteValue = value;
 		getMappings().put(value, this);
@@ -33,9 +38,5 @@ public enum SelectAndCallQualifier {
 
 	public byte getValue() {
 		return byteValue;
-	}
-
-	public static SelectAndCallQualifier forValue(byte value) {
-		return getMappings().get(value);
 	}
 }

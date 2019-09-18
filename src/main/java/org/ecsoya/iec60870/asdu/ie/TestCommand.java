@@ -16,6 +16,10 @@ public class TestCommand extends InformationObject {
 
 	private boolean valid = true;
 
+	public TestCommand() {
+		super(0);
+	}
+
 	/**
 	 * @param parameters
 	 * @param msg
@@ -27,7 +31,7 @@ public class TestCommand extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		if (msg[startIndex++] != 0xcc)
@@ -37,8 +41,18 @@ public class TestCommand extends InformationObject {
 			valid = false;
 	}
 
-	public TestCommand() {
-		super(0);
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
+	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 */
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) 0xcc);
+		frame.setNextByte((byte) 0x55);
 	}
 
 	/*
@@ -47,7 +61,7 @@ public class TestCommand extends InformationObject {
 	 * @see org.ecsoya.iec60870.asdu.InformationObject#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 2;
 	}
 
@@ -73,20 +87,6 @@ public class TestCommand extends InformationObject {
 
 	public boolean isValid() {
 		return valid;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
-	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
-	 */
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) 0xcc);
-		frame.setNextByte((byte) 0x55);
 	}
 
 }

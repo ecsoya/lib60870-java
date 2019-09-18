@@ -20,15 +20,6 @@ import org.ecsoya.iec60870.conn.FilesAvailable.CS101n104File;
 
 public class FileServer {
 
-	public FileServer(IMasterConnection masterConnection, FilesAvailable availableFiles, Consumer<String> logger) {
-		transferState = FileServerState.UNSELECTED_IDLE;
-		alParameters = masterConnection.GetApplicationLayerParameters();
-		maxSegmentSize = FileSegment.GetMaxDataSize(alParameters);
-		this.availableFiles = availableFiles;
-		this.logger = logger;
-		this.connection = masterConnection;
-	}
-
 	private FilesAvailable availableFiles;
 
 	private CS101n104File selectedFile;
@@ -38,21 +29,26 @@ public class FileServer {
 	private ApplicationLayerParameters alParameters;
 
 	private IMasterConnection connection;
-	private int maxSegmentSize;
 
+	private int maxSegmentSize;
 	private byte currentSectionNumber;
+
 	private int currentSectionSize;
 	private int currentSectionOffset;
 	private byte sectionChecksum = 0;
 	private byte fileChecksum = 0;
-
 	private FileServerState transferState;
 
-	private void SendDirectory() {
-
+	public FileServer(IMasterConnection masterConnection, FilesAvailable availableFiles, Consumer<String> logger) {
+		transferState = FileServerState.UNSELECTED_IDLE;
+		alParameters = masterConnection.getApplicationLayerParameters();
+		maxSegmentSize = FileSegment.GetMaxDataSize(alParameters);
+		this.availableFiles = availableFiles;
+		this.logger = logger;
+		this.connection = masterConnection;
 	}
 
-	public boolean HandleFileAsdu(ASDU asdu) throws ASDUParsingException {
+	public boolean handleFileAsdu(ASDU asdu) throws ASDUParsingException {
 		boolean handled = true;
 
 		switch (asdu.getTypeId()) {
@@ -75,9 +71,9 @@ public class FileServer {
 
 						if (transferState == FileServerState.WAITING_FOR_FILE_ACK) {
 
-							selectedFile.provider.TransferComplete(true);
+							selectedFile.provider.transferComplete(true);
 
-							availableFiles.RemoveFile(selectedFile.provider);
+							availableFiles.removeFile(selectedFile.provider);
 
 							selectedFile = null;
 
@@ -94,7 +90,7 @@ public class FileServer {
 
 						if (transferState == FileServerState.WAITING_FOR_FILE_ACK) {
 
-							selectedFile.provider.TransferComplete(false);
+							selectedFile.provider.transferComplete(false);
 
 							selectedFile.selectedBy = null;
 							selectedFile = null;
@@ -115,13 +111,14 @@ public class FileServer {
 							sectionChecksum = 0;
 
 							ASDU sectionReady = new ASDU(alParameters, CauseOfTransmission.FILE_TRANSFER, false, false,
-									(byte) 0, file.GetCA(), false);
+									(byte) 0, file.getCommonAddress(), false);
 
-							sectionReady.addInformationObject(new SectionReady(selectedFile.provider.GetIOA(),
-									selectedFile.provider.GetNameOfFile(), currentSectionNumber, currentSectionSize,
-									false));
+							sectionReady.addInformationObject(
+									new SectionReady(selectedFile.provider.getInformationObjectAddress(),
+											selectedFile.provider.getNameOfFile(), currentSectionNumber,
+											currentSectionSize, false));
 
-							connection.SendASDU(sectionReady);
+							connection.sendASDU(sectionReady);
 
 							transferState = FileServerState.TRANSMIT_SECTION;
 						} else {
@@ -136,16 +133,17 @@ public class FileServer {
 
 							currentSectionNumber++;
 
-							int nextSectionSize = selectedFile.provider.GetSectionSize(currentSectionNumber);
+							int nextSectionSize = selectedFile.provider.getSectionSize(currentSectionNumber);
 
 							ASDU responseAsdu = new ASDU(alParameters, CauseOfTransmission.FILE_TRANSFER, false, false,
-									(byte) 0, file.GetCA(), false);
+									(byte) 0, file.getCommonAddress(), false);
 
 							if (nextSectionSize == -1) {
 								logger("Reveived positive file section ACK - send last section indication");
 
-								responseAsdu.addInformationObject(new FileLastSegmentOrSection(file.GetIOA(),
-										file.GetNameOfFile(), (byte) currentSectionNumber,
+								responseAsdu.addInformationObject(new FileLastSegmentOrSection(
+										file.getInformationObjectAddress(), file.getNameOfFile(),
+										(byte) currentSectionNumber,
 										LastSectionOrSegmentQualifier.FILE_TRANSFER_WITHOUT_DEACT, fileChecksum));
 
 								transferState = FileServerState.WAITING_FOR_FILE_ACK;
@@ -154,14 +152,15 @@ public class FileServer {
 
 								currentSectionSize = nextSectionSize;
 
-								responseAsdu.addInformationObject(new SectionReady(selectedFile.provider.GetIOA(),
-										selectedFile.provider.GetNameOfFile(), currentSectionNumber, currentSectionSize,
-										false));
+								responseAsdu.addInformationObject(
+										new SectionReady(selectedFile.provider.getInformationObjectAddress(),
+												selectedFile.provider.getNameOfFile(), currentSectionNumber,
+												currentSectionSize, false));
 
 								transferState = FileServerState.WAITING_FOR_SECTION_CALL;
 							}
 
-							connection.SendASDU(responseAsdu);
+							connection.sendASDU(responseAsdu);
 
 							sectionChecksum = 0;
 						} else {
@@ -177,7 +176,7 @@ public class FileServer {
 
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				connection.SendASDU(asdu);
+				connection.sendASDU(asdu);
 			}
 			break;
 
@@ -195,11 +194,12 @@ public class FileServer {
 
 						logger("Received SELECT FILE");
 
-						CS101n104File file = availableFiles.GetFile(asdu.getCommonAddress(), sc.getObjectAddress(), sc.getNof());
+						CS101n104File file = availableFiles.getFile(asdu.getCommonAddress(), sc.getObjectAddress(),
+								sc.getNof());
 
 						if (file == null) {
 							asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_INFORMATION_OBJECT_ADDRESS);
-							connection.SendASDU(asdu);
+							connection.sendASDU(asdu);
 						} else {
 
 							ASDU fileReady = new ASDU(alParameters, CauseOfTransmission.FILE_TRANSFER, false, false,
@@ -211,14 +211,14 @@ public class FileServer {
 								file.selectedBy = this;
 
 								fileReady.addInformationObject(new FileReady(sc.getObjectAddress(), sc.getNof(),
-										file.provider.GetFileSize(), true));
+										file.provider.getFileSize(), true));
 
 							} else {
 								fileReady.addInformationObject(
 										new FileReady(sc.getObjectAddress(), sc.getNof(), 0, false));
 							}
 
-							connection.SendASDU(fileReady);
+							connection.sendASDU(fileReady);
 
 							selectedFile = file;
 
@@ -254,26 +254,26 @@ public class FileServer {
 
 					if (transferState == FileServerState.WAITING_FOR_FILE_CALL) {
 
-						if (selectedFile.provider.GetIOA() != sc.getObjectAddress()) {
+						if (selectedFile.provider.getInformationObjectAddress() != sc.getObjectAddress()) {
 							logger("Unkown IOA");
 
 							asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_INFORMATION_OBJECT_ADDRESS);
-							connection.SendASDU(asdu);
+							connection.sendASDU(asdu);
 						} else {
 
 							ASDU sectionReady = new ASDU(alParameters, CauseOfTransmission.FILE_TRANSFER, false, false,
 									(byte) 0, asdu.getCommonAddress(), false);
 
 							sectionReady.addInformationObject(new SectionReady(sc.getObjectAddress(),
-									selectedFile.provider.GetNameOfFile(), (byte) 0, 0, false));
+									selectedFile.provider.getNameOfFile(), (byte) 0, 0, false));
 
-							connection.SendASDU(sectionReady);
+							connection.sendASDU(sectionReady);
 
 							logger("Send SECTION READY");
 
 							currentSectionNumber = 0;
 							currentSectionOffset = 0;
-							currentSectionSize = selectedFile.provider.GetSectionSize(0);
+							currentSectionSize = selectedFile.provider.getSectionSize(0);
 
 							transferState = FileServerState.WAITING_FOR_SECTION_CALL;
 						}
@@ -288,11 +288,11 @@ public class FileServer {
 
 					if (transferState == FileServerState.WAITING_FOR_SECTION_CALL) {
 
-						if (selectedFile.provider.GetIOA() != sc.getObjectAddress()) {
+						if (selectedFile.provider.getInformationObjectAddress() != sc.getObjectAddress()) {
 							logger("Unkown IOA");
 
 							asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_INFORMATION_OBJECT_ADDRESS);
-							connection.SendASDU(asdu);
+							connection.sendASDU(asdu);
 						} else {
 
 							transferState = FileServerState.TRANSMIT_SECTION;
@@ -305,11 +305,11 @@ public class FileServer {
 			} else if (asdu.getCauseOfTransmission() == CauseOfTransmission.REQUEST) {
 				logger("Call directory received");
 
-				availableFiles.SendDirectoy(connection, false);
+				availableFiles.sendDirectoy(connection, false);
 
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-				connection.SendASDU(asdu);
+				connection.sendASDU(asdu);
 			}
 			break;
 
@@ -321,7 +321,7 @@ public class FileServer {
 		return handled;
 	}
 
-	public void HandleFileTransmission() {
+	public void handleFileTransmission() {
 
 		if (transferState != FileServerState.UNSELECTED_IDLE) {
 
@@ -332,22 +332,22 @@ public class FileServer {
 					IFileProvider file = selectedFile.provider;
 
 					ASDU fileAsdu = new ASDU(alParameters, CauseOfTransmission.FILE_TRANSFER, false, false, (byte) 0,
-							file.GetCA(), false);
+							file.getCommonAddress(), false);
 
 					if (currentSectionOffset == currentSectionSize) {
 
 						// send last segment
 
-						fileAsdu.addInformationObject(
-								new FileLastSegmentOrSection(file.GetIOA(), file.GetNameOfFile(), currentSectionNumber,
-										LastSectionOrSegmentQualifier.SECTION_TRANSFER_WITHOUT_DEACT, sectionChecksum));
+						fileAsdu.addInformationObject(new FileLastSegmentOrSection(file.getInformationObjectAddress(),
+								file.getNameOfFile(), currentSectionNumber,
+								LastSectionOrSegmentQualifier.SECTION_TRANSFER_WITHOUT_DEACT, sectionChecksum));
 
 						fileChecksum += sectionChecksum;
 						sectionChecksum = 0;
 
 						logger("Send LAST SEGMENT");
 
-						connection.SendASDU(fileAsdu);
+						connection.sendASDU(fileAsdu);
 
 						transferState = FileServerState.WAITING_FOR_SECTION_ACK;
 
@@ -360,11 +360,11 @@ public class FileServer {
 
 						byte[] segmentData = new byte[currentSegmentSize];
 
-						file.GetSegmentData(currentSectionNumber, currentSectionOffset, currentSegmentSize,
+						file.getSegmentData(currentSectionNumber, currentSectionOffset, currentSegmentSize,
 								segmentData);
 
-						fileAsdu.addInformationObject(new FileSegment(file.GetIOA(), file.GetNameOfFile(),
-								currentSectionNumber, segmentData));
+						fileAsdu.addInformationObject(new FileSegment(file.getInformationObjectAddress(),
+								file.getNameOfFile(), currentSectionNumber, segmentData));
 
 						byte checksum = 0;
 
@@ -372,7 +372,7 @@ public class FileServer {
 							checksum += octet;
 						}
 
-						connection.SendASDU(fileAsdu);
+						connection.sendASDU(fileAsdu);
 
 						sectionChecksum += checksum;
 
@@ -389,5 +389,9 @@ public class FileServer {
 
 	private void logger(String msg) {
 		this.logger.accept(msg);
+	}
+
+	private void sendDirectory() {
+
 	}
 }

@@ -8,56 +8,16 @@ import org.ecsoya.iec60870.asdu.TypeID;
 import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
 
 public class ParameterScaledValue extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.P_ME_NB_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private ScaledValue scaledValue;
 
-	public final ScaledValue getScaledValue() {
-		return scaledValue;
-	}
-
-	public final void setScaledValue(ScaledValue value) {
-		scaledValue = value;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte qpm;
 	private byte qpm;
 
-	public final float getQPM() {
-		return qpm;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public ParameterScaledValue(int objectAddress, ScaledValue value, byte qpm)
-	public ParameterScaledValue(int objectAddress, ScaledValue value, byte qpm) {
-		super(objectAddress);
-		scaledValue = value;
-
-		this.qpm = qpm;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal ParameterScaledValue(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
 	public ParameterScaledValue(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
 			throws ASDUParsingException {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); // skip IOA
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -68,12 +28,46 @@ public class ParameterScaledValue extends InformationObject {
 		qpm = msg[startIndex++];
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public ParameterScaledValue(int objectAddress, ScaledValue value, byte qpm) {
+		super(objectAddress);
+		scaledValue = value;
 
-		frame.appendBytes(scaledValue.GetEncodedValue());
+		this.qpm = qpm;
+	}
+
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+
+		frame.appendBytes(scaledValue.getEncodedValue());
 
 		frame.setNextByte(qpm);
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 3;
+	}
+
+	public final float getQPM() {
+		return qpm;
+	}
+
+	public final ScaledValue getScaledValue() {
+		return scaledValue;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.P_ME_NB_1;
+	}
+
+	public final void setScaledValue(ScaledValue value) {
+		scaledValue = value;
 	}
 }

@@ -26,7 +26,7 @@ public class SetpointCommandShortWithCP56Time2a extends SetpointCommandShort {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA();
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 5; /* skip IOA + float + QOS */
@@ -53,8 +53,8 @@ public class SetpointCommandShortWithCP56Time2a extends SetpointCommandShort {
 	 * Frame, org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
 	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 		frame.appendBytes(this.timestamp.getEncodedValue());
 	}
 
@@ -64,18 +64,8 @@ public class SetpointCommandShortWithCP56Time2a extends SetpointCommandShort {
 	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandShort#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 12;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandShort#getType()
-	 */
-	@Override
-	public TypeID getType() {
-		return TypeID.C_SE_TC_1;
 	}
 
 	/*
@@ -86,5 +76,15 @@ public class SetpointCommandShortWithCP56Time2a extends SetpointCommandShort {
 	@Override
 	public boolean getSupportsSequence() {
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandShort#getType()
+	 */
+	@Override
+	public TypeID getType() {
+		return TypeID.C_SE_TC_1;
 	}
 }

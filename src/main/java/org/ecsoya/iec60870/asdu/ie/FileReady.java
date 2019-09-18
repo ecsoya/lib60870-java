@@ -27,7 +27,7 @@ public class FileReady extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -56,12 +56,21 @@ public class FileReady extends InformationObject {
 			frq = 0;
 	}
 
-	public boolean isPositive() {
-		return ((frq & 0x80) == 0x80);
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
+
+		frame.setNextByte((byte) (lengthOfFile % 0x100));
+		frame.setNextByte((byte) ((lengthOfFile / 0x100) % 0x100));
+		frame.setNextByte((byte) ((lengthOfFile / 0x10000) % 0x100));
+
+		frame.setNextByte(frq);
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 6;
 	}
 
@@ -75,16 +84,7 @@ public class FileReady extends InformationObject {
 		return TypeID.F_FR_NA_1;
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
-
-		frame.setNextByte((byte) (lengthOfFile % 0x100));
-		frame.setNextByte((byte) ((lengthOfFile / 0x100) % 0x100));
-		frame.setNextByte((byte) ((lengthOfFile / 0x10000) % 0x100));
-
-		frame.setNextByte(frq);
+	public boolean isPositive() {
+		return ((frq & 0x80) == 0x80);
 	}
 }

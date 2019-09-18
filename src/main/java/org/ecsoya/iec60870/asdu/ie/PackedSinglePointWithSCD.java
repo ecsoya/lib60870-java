@@ -21,7 +21,7 @@ public class PackedSinglePointWithSCD extends InformationObject {
 		if (!isSquence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		setScd(new StatusAndStatusChangeDetection(msg, startIndex));
@@ -36,12 +36,16 @@ public class PackedSinglePointWithSCD extends InformationObject {
 		this.setQds(quality);
 	}
 
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-		frame.appendBytes(getScd().GetEncodedValue());
+		frame.appendBytes(getScd().getEncodedValue());
 
 		frame.setNextByte(getQds().getEncodedValue());
+	}
+
+	public int getEncodedSize() {
+		return 5;
 	}
 
 	/**
@@ -52,24 +56,10 @@ public class PackedSinglePointWithSCD extends InformationObject {
 	}
 
 	/**
-	 * @param qds the qds to set
-	 */
-	public void setQds(QualityDescriptor qds) {
-		this.qds = qds;
-	}
-
-	/**
 	 * @return the scd
 	 */
 	public StatusAndStatusChangeDetection getScd() {
 		return scd;
-	}
-
-	/**
-	 * @param scd the scd to set
-	 */
-	public void setScd(StatusAndStatusChangeDetection scd) {
-		this.scd = scd;
 	}
 
 	/*
@@ -82,11 +72,21 @@ public class PackedSinglePointWithSCD extends InformationObject {
 		return true;
 	}
 
-	public int GetEncodedSize() {
-		return 5;
-	}
-
 	public TypeID getType() {
 		return TypeID.M_PS_NA_1;
+	}
+
+	/**
+	 * @param qds the qds to set
+	 */
+	public void setQds(QualityDescriptor qds) {
+		this.qds = qds;
+	}
+
+	/**
+	 * @param scd the scd to set
+	 */
+	public void setScd(StatusAndStatusChangeDetection scd) {
+		this.scd = scd;
 	}
 }

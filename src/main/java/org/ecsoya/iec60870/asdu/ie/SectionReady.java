@@ -27,7 +27,7 @@ public class SectionReady extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -59,12 +59,23 @@ public class SectionReady extends InformationObject {
 			srq = 0;
 	}
 
-	public boolean isNotReady() {
-		return ((srq & 0x80) == 0x80);
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
+
+		frame.setNextByte(nameOfSection);
+
+		frame.setNextByte((byte) (lengthOfSection % 0x100));
+		frame.setNextByte((byte) ((lengthOfSection / 0x100) % 0x100));
+		frame.setNextByte((byte) ((lengthOfSection / 0x10000) % 0x100));
+
+		frame.setNextByte(srq);
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 7;
 	}
 
@@ -78,19 +89,8 @@ public class SectionReady extends InformationObject {
 		return TypeID.F_SR_NA_1;
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
-
-		frame.setNextByte(nameOfSection);
-
-		frame.setNextByte((byte) (lengthOfSection % 0x100));
-		frame.setNextByte((byte) ((lengthOfSection / 0x100) % 0x100));
-		frame.setNextByte((byte) ((lengthOfSection / 0x10000) % 0x100));
-
-		frame.setNextByte(srq);
+	public boolean isNotReady() {
+		return ((srq & 0x80) == 0x80);
 	}
 
 }

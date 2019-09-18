@@ -27,7 +27,7 @@ public class FileDirectory extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -82,8 +82,31 @@ public class FileDirectory extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
+
+		frame.setNextByte((byte) (lengthOfFile % 0x100));
+		frame.setNextByte((byte) ((lengthOfFile / 0x100) % 0x100));
+		frame.setNextByte((byte) ((lengthOfFile / 0x10000) % 0x100));
+
+		frame.setNextByte((byte) sof);
+
+		frame.appendBytes(creationTime.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
 		return 13;
+	}
+
+	public NameOfFile getNof() {
+		return nof;
+	}
+
+	public int getStatus() {
+		return (int) (sof & 0x1f);
 	}
 
 	@Override
@@ -96,38 +119,15 @@ public class FileDirectory extends InformationObject {
 		return TypeID.F_DR_TA_1;
 	}
 
-	public int getStatus() {
-		return (int) (sof & 0x1f);
-	}
-
-	public boolean isLFD() {
-		return ((sof & 0x20) == 0x20);
+	public boolean isFA() {
+		return ((sof & 0x80) == 0x80);
 	}
 
 	public boolean isFOR() {
 		return ((sof & 0x40) == 0x40);
 	}
 
-	public boolean isFA() {
-		return ((sof & 0x80) == 0x80);
-	}
-
-	public NameOfFile getNof() {
-		return nof;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
-
-		frame.setNextByte((byte) (lengthOfFile % 0x100));
-		frame.setNextByte((byte) ((lengthOfFile / 0x100) % 0x100));
-		frame.setNextByte((byte) ((lengthOfFile / 0x10000) % 0x100));
-
-		frame.setNextByte((byte) sof);
-
-		frame.appendBytes(creationTime.getEncodedValue());
+	public boolean isLFD() {
+		return ((sof & 0x20) == 0x20);
 	}
 }

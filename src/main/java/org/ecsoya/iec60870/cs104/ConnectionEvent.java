@@ -63,8 +63,11 @@ public enum ConnectionEvent {
 
 	public static final int SIZE = java.lang.Integer.SIZE;
 
-	private int intValue;
 	private static java.util.HashMap<Integer, ConnectionEvent> mappings;
+
+	public static ConnectionEvent forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, ConnectionEvent> getMappings() {
 		if (mappings == null) {
@@ -77,6 +80,8 @@ public enum ConnectionEvent {
 		return mappings;
 	}
 
+	private int intValue;
+
 	private ConnectionEvent(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -84,9 +89,5 @@ public enum ConnectionEvent {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static ConnectionEvent forValue(int value) {
-		return getMappings().get(value);
 	}
 }

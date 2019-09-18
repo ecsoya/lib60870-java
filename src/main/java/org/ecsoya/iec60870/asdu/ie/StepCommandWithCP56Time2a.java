@@ -26,7 +26,7 @@ public class StepCommandWithCP56Time2a extends StepCommand {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA() + 1; /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 1; /* step command value */
@@ -54,19 +54,9 @@ public class StepCommandWithCP56Time2a extends StepCommand {
 	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
 	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 		frame.appendBytes(timestamp.getEncodedValue());
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.StepCommand#getType()
-	 */
-	@Override
-	public TypeID getType() {
-		return TypeID.C_RC_TA_1;
 	}
 
 	/*
@@ -77,6 +67,16 @@ public class StepCommandWithCP56Time2a extends StepCommand {
 	@Override
 	public boolean getSupportsSequence() {
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.StepCommand#getType()
+	 */
+	@Override
+	public TypeID getType() {
+		return TypeID.C_RC_TA_1;
 	}
 
 }

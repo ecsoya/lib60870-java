@@ -29,7 +29,7 @@ public class ClockSynchronizationCommand extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		/* parse CP56Time2a (time stamp) */
@@ -47,11 +47,28 @@ public class ClockSynchronizationCommand extends InformationObject {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
+	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 */
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.appendBytes(newTime.getEncodedValue());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see org.ecsoya.iec60870.asdu.InformationObject#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 7;
+	}
+
+	public CP56Time2a getNewTime() {
+		return newTime;
 	}
 
 	/*
@@ -72,23 +89,6 @@ public class ClockSynchronizationCommand extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.C_CS_NA_1;
-	}
-
-	public CP56Time2a getNewTime() {
-		return newTime;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
-	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
-	 */
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.appendBytes(newTime.getEncodedValue());
 	}
 
 }

@@ -8,35 +8,8 @@ import org.ecsoya.iec60870.asdu.TypeID;
 import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
 
 public class MeasuredValueScaledWithCP56Time2a extends MeasuredValueScaled {
-	@Override
-	public int GetEncodedSize() {
-		return 10;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ME_TE_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private CP56Time2a timestamp;
 
-	public final CP56Time2a getTimestamp() {
-		return this.timestamp;
-	}
-
-	public MeasuredValueScaledWithCP56Time2a(int objectAddress, int value, QualityDescriptor quality,
-			CP56Time2a timestamp) {
-		super(objectAddress, value, quality);
-		this.timestamp = timestamp;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal MeasuredValueScaledWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public MeasuredValueScaledWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -44,7 +17,7 @@ public class MeasuredValueScaledWithCP56Time2a extends MeasuredValueScaled {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -54,11 +27,36 @@ public class MeasuredValueScaledWithCP56Time2a extends MeasuredValueScaled {
 		timestamp = new CP56Time2a(msg, startIndex);
 	}
 
+	public MeasuredValueScaledWithCP56Time2a(int objectAddress, int value, QualityDescriptor quality,
+			CP56Time2a timestamp) {
+		super(objectAddress, value, quality);
+		this.timestamp = timestamp;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 10;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	public final CP56Time2a getTimestamp() {
+		return this.timestamp;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ME_TE_1;
 	}
 
 }

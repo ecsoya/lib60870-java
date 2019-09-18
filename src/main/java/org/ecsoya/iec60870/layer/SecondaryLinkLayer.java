@@ -12,17 +12,17 @@ public abstract class SecondaryLinkLayer {
 
 	private int Address;
 
-	public abstract void HandleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb,
-			boolean fcv, byte[] msg, int userDataStart, int userDataLength) throws IOException;
-
-	public abstract void RunStateMachine();
-
 	/**
 	 * @return the address
 	 */
 	public int getAddress() {
 		return Address;
 	}
+
+	public abstract void handleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb,
+			boolean fcv, byte[] msg, int userDataStart, int userDataLength) throws IOException;
+
+	public abstract void runStateMachine();
 
 	/**
 	 * @param address the address to set

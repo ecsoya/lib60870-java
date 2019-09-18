@@ -10,30 +10,6 @@ public class ConnectionStatistics {
 	private int rcvdTestFrActCounter = 0;
 	private int rcvdTestFrConCounter = 0;
 
-	public final void Reset() {
-		sentMsgCounter = 0;
-		rcvdMsgCounter = 0;
-		rcvdTestFrActCounter = 0;
-		rcvdTestFrConCounter = 0;
-	}
-
-	/**
-	 * Gets or sets the sent message counter.
-	 * 
-	 * <value>The sent message counter.</value>
-	 */
-	public final int getSentMsgCounter() {
-		return this.sentMsgCounter;
-	}
-
-	public final void setSentMsgCounter(int value) {
-		this.sentMsgCounter = value;
-	}
-
-	public void increaseSentMsgCounter() {
-		sentMsgCounter++;
-	}
-
 	/**
 	 * Gets or sets the received message counter.
 	 * 
@@ -41,14 +17,6 @@ public class ConnectionStatistics {
 	 */
 	public final int getRcvdMsgCounter() {
 		return this.rcvdMsgCounter;
-	}
-
-	public final void setRcvdMsgCounter(int value) {
-		this.rcvdMsgCounter = value;
-	}
-
-	public void increaseRcvdMsgCounter() {
-		rcvdMsgCounter++;
 	}
 
 	/**
@@ -60,14 +28,6 @@ public class ConnectionStatistics {
 		return this.rcvdTestFrActCounter;
 	}
 
-	public final void setRcvdTestFrActCounter(int value) {
-		this.rcvdTestFrActCounter = value;
-	}
-
-	public void increaseRcvdTestFrActCounter() {
-		rcvdTestFrActCounter++;
-	}
-
 	/**
 	 * Counter for the TEST_FR_CON messages received.
 	 * 
@@ -77,12 +37,52 @@ public class ConnectionStatistics {
 		return this.rcvdTestFrConCounter;
 	}
 
-	public final void setRcvdTestFrConCounter(int value) {
-		this.rcvdTestFrConCounter = value;
+	/**
+	 * Gets or sets the sent message counter.
+	 * 
+	 * <value>The sent message counter.</value>
+	 */
+	public final int getSentMsgCounter() {
+		return this.sentMsgCounter;
+	}
+
+	public void increaseRcvdMsgCounter() {
+		rcvdMsgCounter++;
+	}
+
+	public void increaseRcvdTestFrActCounter() {
+		rcvdTestFrActCounter++;
 	}
 
 	public void increaseRcvdTestFrConCounter() {
 		rcvdTestFrConCounter++;
+	}
+
+	public void increaseSentMsgCounter() {
+		sentMsgCounter++;
+	}
+
+	public final void Reset() {
+		sentMsgCounter = 0;
+		rcvdMsgCounter = 0;
+		rcvdTestFrActCounter = 0;
+		rcvdTestFrConCounter = 0;
+	}
+
+	public final void setRcvdMsgCounter(int value) {
+		this.rcvdMsgCounter = value;
+	}
+
+	public final void setRcvdTestFrActCounter(int value) {
+		this.rcvdTestFrActCounter = value;
+	}
+
+	public final void setRcvdTestFrConCounter(int value) {
+		this.rcvdTestFrConCounter = value;
+	}
+
+	public final void setSentMsgCounter(int value) {
+		this.sentMsgCounter = value;
 	}
 
 }

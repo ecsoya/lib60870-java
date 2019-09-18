@@ -11,16 +11,7 @@ public interface IPrimaryLinkLayerCallbacks {
 	/// </summary>
 	/// <param name="slaveAddress">address of the slave that requested the access
 	/// demand</param>
-	void AccessDemand(int slaveAddress);
-
-	/// <summary>
-	/// User data (application layer data) received from a slave
-	/// </summary>
-	/// <param name="slaveAddress">address of the slave that sent the data</param>
-	/// <param name="message">buffer containing the received message</param>
-	/// <param name="start">start of user data in the buffer</param>
-	/// <param name="length">length of user data in the buffer</param>
-	void UserData(int slaveAddress, byte[] message, int start, int length) throws ConnectionException, IOException;
+	void accessDemand(int slaveAddress);
 
 	/// <summary>
 	/// A former request to the slave (UD Class 1, UD Class 2, confirmed...)
@@ -29,5 +20,14 @@ public interface IPrimaryLinkLayerCallbacks {
 	/// </summary>
 	/// <param name="slaveAddress">address of the slave that caused the
 	/// timeout</param>
-	void Timeout(int slaveAddress);
+	void timeout(int slaveAddress);
+
+	/// <summary>
+	/// User data (application layer data) received from a slave
+	/// </summary>
+	/// <param name="slaveAddress">address of the slave that sent the data</param>
+	/// <param name="message">buffer containing the received message</param>
+	/// <param name="start">start of user data in the buffer</param>
+	/// <param name="length">length of user data in the buffer</param>
+	void userData(int slaveAddress, byte[] message, int start, int length) throws ConnectionException, IOException;
 }

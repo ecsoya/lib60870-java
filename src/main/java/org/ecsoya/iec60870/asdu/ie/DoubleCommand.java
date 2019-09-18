@@ -29,7 +29,7 @@ public class DoubleCommand extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		dcq = msg[startIndex++];
@@ -51,11 +51,32 @@ public class DoubleCommand extends InformationObject {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
+	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 */
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte(dcq);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see org.ecsoya.iec60870.asdu.InformationObject#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 1;
+	}
+
+	public int getQU() {
+		return ((dcq & 0x7c) / 4);
+	}
+
+	public int getState() {
+		return (dcq & 0x03);
 	}
 
 	/*
@@ -78,28 +99,7 @@ public class DoubleCommand extends InformationObject {
 		return TypeID.C_DC_NA_1;
 	}
 
-	public int getQU() {
-		return ((dcq & 0x7c) / 4);
-	}
-
-	public int getState() {
-		return (dcq & 0x03);
-	}
-
 	public boolean isSelect() {
 		return ((dcq & 0x80) == 0x80);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
-	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
-	 */
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte(dcq);
 	}
 }

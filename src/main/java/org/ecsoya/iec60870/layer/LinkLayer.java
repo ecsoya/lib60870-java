@@ -45,14 +45,11 @@ public class LinkLayer {
 		this.debugLog = debugLog;
 	}
 
-	public void SetReceivedRawMessageHandler(RawMessageHandler handler, Object parameter) {
-		receivedRawMessageHandler = handler;
-		receivedRawMessageHandlerParameter = parameter;
-	}
-
-	public void SetSentRawMessageHandler(RawMessageHandler handler, Object parameter) {
-		sentRawMessageHandler = handler;
-		sentRawMessageHandlerParameter = parameter;
+	private void debugLog(String log) {
+		if (debugLog != null) {
+			debugLog.accept(log);
+		}
+		System.out.println(log);
 	}
 
 	int GetBroadcastAddress() {
@@ -65,24 +62,166 @@ public class LinkLayer {
 		return 0;
 	}
 
+	/**
+	 * @return the linkLayerMode
+	 */
+	public LinkLayerMode getLinkLayerMode() {
+		return linkLayerMode;
+	}
+
 	public int getOwnAddress() {
 		return secondaryLinkLayer.getAddress();
 	}
 
-	public void setOwnAddress(int value) {
-		secondaryLinkLayer.setAddress(value);
+	public long getTimeoutForACK() {
+		return linkLayerParameters.getTimeoutForACK();
 	}
 
-	/// <summary>
-	/// Gets or sets a value indicating whether this balanced <see
-	/// cref="lib60870.CS103.LinkLayer"/> has DIR bit set
-	/// </summary>
-	/// <value><c>true</c> if DI; otherwise, <c>false</c>.</value>
-	/**
-	 * @param dir the dir to set
-	 */
-	public void setDir(boolean dir) {
-		this.dir = dir;
+	public long getTimeoutRepeat() {
+		return linkLayerParameters.getTimeoutRepeat();
+	}
+
+	void handleMessageAction(byte[] msg, int msgSize) throws Exception {
+		debugLog("RECV " + Arrays.toString(msg));
+
+		boolean handleMessage = true;
+
+		if (receivedRawMessageHandler != null)
+			handleMessage = receivedRawMessageHandler.invoke(receivedRawMessageHandlerParameter, msg, msgSize);
+
+		if (handleMessage) {
+
+			if (linkLayerMode == LinkLayerMode.BALANCED)
+				handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
+			else {
+				if (secondaryLinkLayer != null)
+					parseHeaderSecondaryUnbalanced(buffer, msgSize);
+				else if (primaryLinkLayer != null)
+					handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
+				else
+					debugLog("ERROR: Neither primary nor secondary link layer available!");
+			}
+		} else
+			debugLog("Message ignored because of raw message handler");
+	}
+
+	public void handleMessageBalancedAndPrimaryUnbalanced(byte[] msg, int msgSize) throws Exception {
+		int userDataLength = 0;
+		int userDataStart = 0;
+		byte c = 0;
+		int csStart = 0;
+		int csIndex = 0;
+		int address = 0; /* address can be ignored in balanced mode? */
+		boolean prm = true;
+		int fc = 0;
+
+		boolean isAck = false;
+
+		if (msg[0] == 0x68) {
+
+			if (msg[1] != msg[2]) {
+				debugLog("ERROR: L fields differ!");
+				return;
+			}
+
+			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
+			userDataStart = 5 + linkLayerParameters.getAddressLength();
+
+			csStart = 4;
+			csIndex = userDataStart + userDataLength;
+
+			// check if message size is reasonable
+			if (msgSize != (userDataStart + userDataLength + 2 /* CS + END */)) {
+				debugLog("ERROR: Invalid message length");
+				return;
+			}
+
+			c = msg[4];
+
+			if (linkLayerParameters.getAddressLength() > 0)
+				address += msg[5];
+
+			if (linkLayerParameters.getAddressLength() > 1)
+				address += msg[6] * 0x100;
+		} else if (msg[0] == 0x10) {
+			c = msg[1];
+			csStart = 1;
+			csIndex = 2 + linkLayerParameters.getAddressLength();
+
+			if (linkLayerParameters.getAddressLength() > 0)
+				address += msg[2];
+
+			if (linkLayerParameters.getAddressLength() > 1)
+				address += msg[3] * 0x100;
+
+		} else if (msg[0] == 0xe5) {
+			isAck = true;
+			fc = FunctionCodeSecondary.ACK.getValue();
+			prm = false; /* single char ACK is only sent by secondary station */
+			debugLog("Received single char ACK");
+		} else {
+			debugLog("ERROR: Received unexpected message type!");
+			return;
+		}
+
+		if (isAck == false) {
+
+			// check checksum
+			byte checksum = 0;
+
+			for (int i = csStart; i < csIndex; i++)
+				checksum += msg[i];
+
+			if (checksum != msg[csIndex]) {
+				debugLog("ERROR: checksum invalid!");
+				return;
+			}
+
+			// parse C field bits
+			fc = c & 0x0f;
+			prm = ((c & 0x40) == 0x40);
+
+			if (prm) { /* we are secondary link layer */
+				boolean fcb = ((c & 0x20) == 0x20);
+				boolean fcv = ((c & 0x10) == 0x10);
+
+				debugLog("PRM=" + (prm == true ? "1" : "0") + " FCB=" + (fcb == true ? "1" : "0") + " FCV="
+						+ (fcv == true ? "1" : "0") + " FC=" + fc + "(" + c + ")");
+
+				FunctionCodePrimary fcp = FunctionCodePrimary.get(fc);
+
+				if (secondaryLinkLayer != null)
+					secondaryLinkLayer.handleMessage(fcp, false, address, fcb, fcv, msg, userDataStart, userDataLength);
+				else
+					debugLog("No secondary link layer available!");
+
+			} else { /* we are primary link layer */
+				boolean dir = ((c & 0x80) == 0x80); /* DIR - direction for balanced transmission */
+				boolean dfc = ((c & 0x10) == 0x10); /* DFC - Data flow control */
+				boolean acd = ((c
+						& 0x20) == 0x20); /* ACD - access demand for class 1 data - for unbalanced transmission */
+
+				debugLog("PRM=" + (prm == true ? "1" : "0") + " DIR=" + (dir == true ? "1" : "0") + " DFC="
+						+ (dfc == true ? "1" : "0") + " FC=" + fc + "(" + c + ")");
+
+				FunctionCodeSecondary fcs = FunctionCodeSecondary.get(fc);
+
+				if (primaryLinkLayer != null) {
+
+					if (linkLayerMode == LinkLayerMode.BALANCED)
+						primaryLinkLayer.handleMessage(fcs, dir, dfc, address, msg, userDataStart, userDataLength);
+					else
+						primaryLinkLayer.handleMessage(fcs, acd, dfc, address, msg, userDataStart, userDataLength);
+				} else
+					debugLog("No primary link layer available!");
+
+			}
+
+		} else { /* Single byte ACK */
+			if (primaryLinkLayer != null)
+				primaryLinkLayer.handleMessage(FunctionCodeSecondary.ACK, false, false, -1, null, 0, 0);
+		}
+
 	}
 
 	/**
@@ -92,63 +231,138 @@ public class LinkLayer {
 		return dir;
 	}
 
-	public long getTimeoutForACK() {
-		return linkLayerParameters.getTimeoutForACK();
+	private void parseHeaderSecondaryUnbalanced(byte[] msg, int msgSize) throws IOException {
+		int userDataLength = 0;
+		int userDataStart = 0;
+		byte c;
+		int csStart;
+		int csIndex;
+		int address = 0;
+
+		if (msg[0] == 0x68) {
+
+			if (msg[1] != msg[2]) {
+				debugLog("ERROR: L fields differ!");
+				return;
+			}
+
+			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
+			userDataStart = 5 + linkLayerParameters.getAddressLength();
+
+			csStart = 4;
+			csIndex = userDataStart + userDataLength;
+
+			// check if message size is reasonable
+			if (msgSize != (userDataStart + userDataLength + 2 /* CS + END */)) {
+				debugLog("ERROR: Invalid message length");
+				return;
+			}
+
+			c = msg[4];
+		} else if (msg[0] == 0x10) {
+			c = msg[1];
+			csStart = 1;
+			csIndex = 2 + linkLayerParameters.getAddressLength();
+
+		} else {
+			debugLog("ERROR: Received unexpected message type in unbalanced slave mode!");
+			return;
+		}
+
+		boolean isBroadcast = false;
+
+		// check address
+		if (linkLayerParameters.getAddressLength() > 0) {
+			address = msg[csStart + 1];
+
+			if (linkLayerParameters.getAddressLength() > 1) {
+				address += (msg[csStart + 2] * 0x100);
+
+				if (address == 65535)
+					isBroadcast = true;
+			} else {
+				if (address == 255)
+					isBroadcast = true;
+			}
+		}
+
+		int fc = c & 0x0f;
+		FunctionCodePrimary fcp = FunctionCodePrimary.get(fc);
+
+		if (isBroadcast) {
+			if (fcp != FunctionCodePrimary.USER_DATA_NO_REPLY) {
+				debugLog("ERROR: Invalid function code for broadcast message!");
+				return;
+			}
+
+		} else {
+			if (address != secondaryLinkLayer.getAddress()) {
+				debugLog("INFO: unknown link layer address -> ignore message");
+				return;
+			}
+		}
+
+		// check checksum
+		byte checksum = 0;
+
+		for (int i = csStart; i < csIndex; i++)
+			checksum += msg[i];
+
+		if (checksum != msg[csIndex]) {
+			debugLog("ERROR: checksum invalid!");
+			return;
+		}
+
+		// parse C field bits
+		boolean prm = ((c & 0x40) == 0x40);
+
+		if (prm == false) {
+			debugLog("ERROR: Received secondary message in unbalanced slave mode!");
+			return;
+		}
+
+		boolean fcb = ((c & 0x20) == 0x20);
+		boolean fcv = ((c & 0x10) == 0x10);
+
+		debugLog("PRM=" + (prm == true ? "1" : "0") + " FCB=" + (fcb == true ? "1" : "0") + " FCV="
+				+ (fcv == true ? "1" : "0") + " FC=" + fc + "(" + fcp.toString() + ")");
+
+		if (secondaryLinkLayer != null)
+			secondaryLinkLayer.handleMessage(fcp, isBroadcast, address, fcb, fcv, msg, userDataStart, userDataLength);
+		else
+			debugLog("No secondary link layer available!");
 	}
 
-	public void setTimeoutForARK(int value) {
-		linkLayerParameters.setTimeoutForACK(value);
+	public void run() {
+		transceiver.readNextMessage(buffer, (byte[] msg, Integer msgSize) -> {
+			try {
+				handleMessageAction(msg, msgSize);
+			} catch (IOException e) {
+			} catch (Exception e) {
+
+				e.printStackTrace();
+			}
+			return null;
+		});
+
+		try {
+			if (linkLayerMode == LinkLayerMode.BALANCED) {
+				primaryLinkLayer.runStateMachine();
+				secondaryLinkLayer.runStateMachine();
+			} else {
+				// TODO avoid redirection by LinkLayer class
+				if (primaryLinkLayer != null)
+					primaryLinkLayer.runStateMachine();
+				else if (secondaryLinkLayer != null)
+					secondaryLinkLayer.runStateMachine();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
-	public long getTimeoutRepeat() {
-		return linkLayerParameters.getTimeoutRepeat();
-	}
-
-	public void SetPrimaryLinkLayer(PrimaryLinkLayer primaryLinkLayer) {
-		this.primaryLinkLayer = primaryLinkLayer;
-	}
-
-	public void SetSecondaryLinkLayer(SecondaryLinkLayer secondaryLinkLayer) {
-		this.secondaryLinkLayer = secondaryLinkLayer;
-	}
-
-	/**
-	 * @return the linkLayerMode
-	 */
-	public LinkLayerMode getLinkLayerMode() {
-		return linkLayerMode;
-	}
-
-	/**
-	 * @param linkLayerMode the linkLayerMode to set
-	 */
-	public void setLinkLayerMode(LinkLayerMode linkLayerMode) {
-		this.linkLayerMode = linkLayerMode;
-	}
-
-	public void SendTestFunction() {
-		if (primaryLinkLayer != null)
-			primaryLinkLayer.SendLinkLayerTestFunction();
-	}
-
-	public void SendSingleCharACK() throws IOException {
-		if (sentRawMessageHandler != null)
-			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, SINGLE_CHAR_ACK, 1);
-
-		transceiver.SendMessage(SINGLE_CHAR_ACK, 1);
-	}
-
-	public void SendFixedFramePrimary(FunctionCodePrimary fc, int address, boolean fcb, boolean fcv)
-			throws IOException {
-		SendFixedFrame((byte) fc.getValue(), address, true, dir, fcb, fcv);
-	}
-
-	public void SendFixedFrameSecondary(FunctionCodeSecondary fc, int address, boolean acd, boolean dfc)
-			throws IOException {
-		SendFixedFrame((byte) fc.getValue(), address, false, dir, acd, dfc);
-	}
-
-	public void SendFixedFrame(byte fc, int address, boolean prm, boolean dir, boolean acd, boolean dfc)
+	public void sendFixedFrame(byte fc, int address, boolean prm, boolean dir, boolean acd, boolean dfc)
 			throws IOException {
 		int bufPos = 0;
 
@@ -189,10 +403,32 @@ public class LinkLayer {
 		if (sentRawMessageHandler != null)
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
 
-		transceiver.SendMessage(buffer, bufPos);
+		transceiver.sendMessage(buffer, bufPos);
 	}
 
-	public void SendVariableLengthFramePrimary(FunctionCodePrimary fc, int address, boolean fcb, boolean fcv,
+	public void sendFixedFramePrimary(FunctionCodePrimary fc, int address, boolean fcb, boolean fcv)
+			throws IOException {
+		sendFixedFrame((byte) fc.getValue(), address, true, dir, fcb, fcv);
+	}
+
+	public void sendFixedFrameSecondary(FunctionCodeSecondary fc, int address, boolean acd, boolean dfc)
+			throws IOException {
+		sendFixedFrame((byte) fc.getValue(), address, false, dir, acd, dfc);
+	}
+
+	public void sendSingleCharACK() throws IOException {
+		if (sentRawMessageHandler != null)
+			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, SINGLE_CHAR_ACK, 1);
+
+		transceiver.sendMessage(SINGLE_CHAR_ACK, 1);
+	}
+
+	public void sendTestFunction() {
+		if (primaryLinkLayer != null)
+			primaryLinkLayer.sendLinkLayerTestFunction();
+	}
+
+	public void sendVariableLengthFramePrimary(FunctionCodePrimary fc, int address, boolean fcb, boolean fcv,
 			BufferFrame frame) throws IOException {
 		buffer[0] = 0x68; /* START */
 		buffer[3] = 0x68; /* START */
@@ -247,10 +483,10 @@ public class LinkLayer {
 		if (sentRawMessageHandler != null)
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
 
-		transceiver.SendMessage(buffer, bufPos);
+		transceiver.sendMessage(buffer, bufPos);
 	}
 
-	void SendVariableLengthFrameSecondary(FunctionCodeSecondary fc, int address, boolean acd, boolean dfc,
+	void sendVariableLengthFrameSecondary(FunctionCodeSecondary fc, int address, boolean acd, boolean dfc,
 			BufferFrame frame) throws IOException {
 		buffer[0] = 0x68; /* START */
 		buffer[3] = 0x68; /* START */
@@ -305,284 +541,52 @@ public class LinkLayer {
 		if (sentRawMessageHandler != null)
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
 
-		transceiver.SendMessage(buffer, bufPos);
+		transceiver.sendMessage(buffer, bufPos);
 	}
 
-	private void ParseHeaderSecondaryUnbalanced(byte[] msg, int msgSize) throws IOException {
-		int userDataLength = 0;
-		int userDataStart = 0;
-		byte c;
-		int csStart;
-		int csIndex;
-		int address = 0;
-
-		if (msg[0] == 0x68) {
-
-			if (msg[1] != msg[2]) {
-				DebugLog("ERROR: L fields differ!");
-				return;
-			}
-
-			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
-			userDataStart = 5 + linkLayerParameters.getAddressLength();
-
-			csStart = 4;
-			csIndex = userDataStart + userDataLength;
-
-			// check if message size is reasonable
-			if (msgSize != (userDataStart + userDataLength + 2 /* CS + END */)) {
-				DebugLog("ERROR: Invalid message length");
-				return;
-			}
-
-			c = msg[4];
-		} else if (msg[0] == 0x10) {
-			c = msg[1];
-			csStart = 1;
-			csIndex = 2 + linkLayerParameters.getAddressLength();
-
-		} else {
-			DebugLog("ERROR: Received unexpected message type in unbalanced slave mode!");
-			return;
-		}
-
-		boolean isBroadcast = false;
-
-		// check address
-		if (linkLayerParameters.getAddressLength() > 0) {
-			address = msg[csStart + 1];
-
-			if (linkLayerParameters.getAddressLength() > 1) {
-				address += (msg[csStart + 2] * 0x100);
-
-				if (address == 65535)
-					isBroadcast = true;
-			} else {
-				if (address == 255)
-					isBroadcast = true;
-			}
-		}
-
-		int fc = c & 0x0f;
-		FunctionCodePrimary fcp = FunctionCodePrimary.get(fc);
-
-		if (isBroadcast) {
-			if (fcp != FunctionCodePrimary.USER_DATA_NO_REPLY) {
-				DebugLog("ERROR: Invalid function code for broadcast message!");
-				return;
-			}
-
-		} else {
-			if (address != secondaryLinkLayer.getAddress()) {
-				DebugLog("INFO: unknown link layer address -> ignore message");
-				return;
-			}
-		}
-
-		// check checksum
-		byte checksum = 0;
-
-		for (int i = csStart; i < csIndex; i++)
-			checksum += msg[i];
-
-		if (checksum != msg[csIndex]) {
-			DebugLog("ERROR: checksum invalid!");
-			return;
-		}
-
-		// parse C field bits
-		boolean prm = ((c & 0x40) == 0x40);
-
-		if (prm == false) {
-			DebugLog("ERROR: Received secondary message in unbalanced slave mode!");
-			return;
-		}
-
-		boolean fcb = ((c & 0x20) == 0x20);
-		boolean fcv = ((c & 0x10) == 0x10);
-
-		DebugLog("PRM=" + (prm == true ? "1" : "0") + " FCB=" + (fcb == true ? "1" : "0") + " FCV="
-				+ (fcv == true ? "1" : "0") + " FC=" + fc + "(" + fcp.toString() + ")");
-
-		if (secondaryLinkLayer != null)
-			secondaryLinkLayer.HandleMessage(fcp, isBroadcast, address, fcb, fcv, msg, userDataStart, userDataLength);
-		else
-			DebugLog("No secondary link layer available!");
+	/// <summary>
+	/// Gets or sets a value indicating whether this balanced <see
+	/// cref="lib60870.CS103.LinkLayer"/> has DIR bit set
+	/// </summary>
+	/// <value><c>true</c> if DI; otherwise, <c>false</c>.</value>
+	/**
+	 * @param dir the dir to set
+	 */
+	public void setDir(boolean dir) {
+		this.dir = dir;
 	}
 
-	public void HandleMessageBalancedAndPrimaryUnbalanced(byte[] msg, int msgSize) throws Exception {
-		int userDataLength = 0;
-		int userDataStart = 0;
-		byte c = 0;
-		int csStart = 0;
-		int csIndex = 0;
-		int address = 0; /* address can be ignored in balanced mode? */
-		boolean prm = true;
-		int fc = 0;
-
-		boolean isAck = false;
-
-		if (msg[0] == 0x68) {
-
-			if (msg[1] != msg[2]) {
-				DebugLog("ERROR: L fields differ!");
-				return;
-			}
-
-			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
-			userDataStart = 5 + linkLayerParameters.getAddressLength();
-
-			csStart = 4;
-			csIndex = userDataStart + userDataLength;
-
-			// check if message size is reasonable
-			if (msgSize != (userDataStart + userDataLength + 2 /* CS + END */)) {
-				DebugLog("ERROR: Invalid message length");
-				return;
-			}
-
-			c = msg[4];
-
-			if (linkLayerParameters.getAddressLength() > 0)
-				address += msg[5];
-
-			if (linkLayerParameters.getAddressLength() > 1)
-				address += msg[6] * 0x100;
-		} else if (msg[0] == 0x10) {
-			c = msg[1];
-			csStart = 1;
-			csIndex = 2 + linkLayerParameters.getAddressLength();
-
-			if (linkLayerParameters.getAddressLength() > 0)
-				address += msg[2];
-
-			if (linkLayerParameters.getAddressLength() > 1)
-				address += msg[3] * 0x100;
-
-		} else if (msg[0] == 0xe5) {
-			isAck = true;
-			fc = FunctionCodeSecondary.ACK.getValue();
-			prm = false; /* single char ACK is only sent by secondary station */
-			DebugLog("Received single char ACK");
-		} else {
-			DebugLog("ERROR: Received unexpected message type!");
-			return;
-		}
-
-		if (isAck == false) {
-
-			// check checksum
-			byte checksum = 0;
-
-			for (int i = csStart; i < csIndex; i++)
-				checksum += msg[i];
-
-			if (checksum != msg[csIndex]) {
-				DebugLog("ERROR: checksum invalid!");
-				return;
-			}
-
-			// parse C field bits
-			fc = c & 0x0f;
-			prm = ((c & 0x40) == 0x40);
-
-			if (prm) { /* we are secondary link layer */
-				boolean fcb = ((c & 0x20) == 0x20);
-				boolean fcv = ((c & 0x10) == 0x10);
-
-				DebugLog("PRM=" + (prm == true ? "1" : "0") + " FCB=" + (fcb == true ? "1" : "0") + " FCV="
-						+ (fcv == true ? "1" : "0") + " FC=" + fc + "(" + c + ")");
-
-				FunctionCodePrimary fcp = FunctionCodePrimary.get(fc);
-
-				if (secondaryLinkLayer != null)
-					secondaryLinkLayer.HandleMessage(fcp, false, address, fcb, fcv, msg, userDataStart, userDataLength);
-				else
-					DebugLog("No secondary link layer available!");
-
-			} else { /* we are primary link layer */
-				boolean dir = ((c & 0x80) == 0x80); /* DIR - direction for balanced transmission */
-				boolean dfc = ((c & 0x10) == 0x10); /* DFC - Data flow control */
-				boolean acd = ((c
-						& 0x20) == 0x20); /* ACD - access demand for class 1 data - for unbalanced transmission */
-
-				DebugLog("PRM=" + (prm == true ? "1" : "0") + " DIR=" + (dir == true ? "1" : "0") + " DFC="
-						+ (dfc == true ? "1" : "0") + " FC=" + fc + "(" + c + ")");
-
-				FunctionCodeSecondary fcs = FunctionCodeSecondary.get(fc);
-
-				if (primaryLinkLayer != null) {
-
-					if (linkLayerMode == LinkLayerMode.BALANCED)
-						primaryLinkLayer.HandleMessage(fcs, dir, dfc, address, msg, userDataStart, userDataLength);
-					else
-						primaryLinkLayer.HandleMessage(fcs, acd, dfc, address, msg, userDataStart, userDataLength);
-				} else
-					DebugLog("No primary link layer available!");
-
-			}
-
-		} else { /* Single byte ACK */
-			if (primaryLinkLayer != null)
-				primaryLinkLayer.HandleMessage(FunctionCodeSecondary.ACK, false, false, -1, null, 0, 0);
-		}
-
+	/**
+	 * @param linkLayerMode the linkLayerMode to set
+	 */
+	public void setLinkLayerMode(LinkLayerMode linkLayerMode) {
+		this.linkLayerMode = linkLayerMode;
 	}
 
-	void HandleMessageAction(byte[] msg, int msgSize) throws Exception {
-		DebugLog("RECV " + Arrays.toString(msg));
-
-		boolean handleMessage = true;
-
-		if (receivedRawMessageHandler != null)
-			handleMessage = receivedRawMessageHandler.invoke(receivedRawMessageHandlerParameter, msg, msgSize);
-
-		if (handleMessage) {
-
-			if (linkLayerMode == LinkLayerMode.BALANCED)
-				HandleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
-			else {
-				if (secondaryLinkLayer != null)
-					ParseHeaderSecondaryUnbalanced(buffer, msgSize);
-				else if (primaryLinkLayer != null)
-					HandleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
-				else
-					DebugLog("ERROR: Neither primary nor secondary link layer available!");
-			}
-		} else
-			DebugLog("Message ignored because of raw message handler");
+	public void setOwnAddress(int value) {
+		secondaryLinkLayer.setAddress(value);
 	}
 
-	public void Run() {
-		transceiver.ReadNextMessage(buffer, (byte[] msg, Integer msgSize) -> {
-			try {
-				HandleMessageAction(msg, msgSize);
-			} catch (IOException e) {
-			} catch (Exception e) {
-
-				e.printStackTrace();
-			}
-			return null;
-		});
-
-		if (linkLayerMode == LinkLayerMode.BALANCED) {
-			primaryLinkLayer.RunStateMachine();
-			secondaryLinkLayer.RunStateMachine();
-		} else {
-			// TODO avoid redirection by LinkLayer class
-			if (primaryLinkLayer != null)
-				primaryLinkLayer.RunStateMachine();
-			else if (secondaryLinkLayer != null)
-				secondaryLinkLayer.RunStateMachine();
-		}
-
+	public void SetPrimaryLinkLayer(PrimaryLinkLayer primaryLinkLayer) {
+		this.primaryLinkLayer = primaryLinkLayer;
 	}
 
-	private void DebugLog(String log) {
-		if (debugLog != null) {
-			debugLog.accept(log);
-		}
-		System.out.println(log);
+	public void SetReceivedRawMessageHandler(RawMessageHandler handler, Object parameter) {
+		receivedRawMessageHandler = handler;
+		receivedRawMessageHandlerParameter = parameter;
+	}
+
+	public void SetSecondaryLinkLayer(SecondaryLinkLayer secondaryLinkLayer) {
+		this.secondaryLinkLayer = secondaryLinkLayer;
+	}
+
+	public void SetSentRawMessageHandler(RawMessageHandler handler, Object parameter) {
+		sentRawMessageHandler = handler;
+		sentRawMessageHandlerParameter = parameter;
+	}
+
+	public void setTimeoutForARK(int value) {
+		linkLayerParameters.setTimeoutForACK(value);
 	}
 
 }

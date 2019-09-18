@@ -32,48 +32,12 @@ import org.ecsoya.iec60870.asdu.TypeID;
  */
 
 public class EventOfProtectionEquipment extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 6;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_EP_TA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private SingleEvent singleEvent;
-
-	public final SingleEvent getEvent() {
-		return singleEvent;
-	}
 
 	private CP16Time2a elapsedTime;
 
-	public final CP16Time2a getElapsedTime() {
-		return this.elapsedTime;
-	}
-
 	private CP24Time2a timestamp;
 
-	public final CP24Time2a getTimestamp() {
-		return this.timestamp;
-	}
-
-	public EventOfProtectionEquipment(int ioa, SingleEvent singleEvent, CP16Time2a elapsedTime, CP24Time2a timestamp) {
-		super(ioa);
-		this.singleEvent = singleEvent;
-		this.elapsedTime = elapsedTime;
-		this.timestamp = timestamp;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal EventOfProtectionEquipment(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public EventOfProtectionEquipment(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -81,7 +45,7 @@ public class EventOfProtectionEquipment extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -94,14 +58,48 @@ public class EventOfProtectionEquipment extends InformationObject {
 		timestamp = new CP24Time2a(msg, startIndex);
 	}
 
+	public EventOfProtectionEquipment(int ioa, SingleEvent singleEvent, CP16Time2a elapsedTime, CP24Time2a timestamp) {
+		super(ioa);
+		this.singleEvent = singleEvent;
+		this.elapsedTime = elapsedTime;
+		this.timestamp = timestamp;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.setNextByte(singleEvent.getEncodedValue());
 
 		frame.appendBytes(elapsedTime.getEncodedValue());
 
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	public final CP16Time2a getElapsedTime() {
+		return this.elapsedTime;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 6;
+	}
+
+	public final SingleEvent getEvent() {
+		return singleEvent;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	public final CP24Time2a getTimestamp() {
+		return this.timestamp;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_EP_TA_1;
 	}
 }

@@ -43,20 +43,11 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		this.linkLayer = linkLayer;
 	}
 
-	public void SetLinkLayerStateChanged(LinkLayerStateChanged handler, Object parameter) {
-		stateChangedCallback = handler;
-		stateChangedCallbackParameter = parameter;
-	}
-
-	public LinkLayerState GetLinkLayerState() {
-		return state;
-	}
-
-	/**
-	 * @param linkLayerAddressOtherStation the linkLayerAddressOtherStation to set
-	 */
-	public void setLinkLayerAddressOtherStation(int linkLayerAddressOtherStation) {
-		this.linkLayerAddressOtherStation = linkLayerAddressOtherStation;
+	private void debugLog(String log) {
+		if (debugLog != null) {
+			debugLog.accept(log);
+		}
+		System.out.println(log);
 	}
 
 	/**
@@ -66,16 +57,11 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		return linkLayerAddressOtherStation;
 	}
 
-	private void SetNewState(LinkLayerState newState) {
-		if (newState != state) {
-			state = newState;
-
-			if (stateChangedCallback != null)
-				stateChangedCallback.performStateChanged(stateChangedCallbackParameter, -1, newState);
-		}
+	public LinkLayerState getLinkLayerState() {
+		return state;
 	}
 
-	public void HandleMessage(FunctionCodeSecondary fcs, boolean dir, boolean dfc, int address, byte[] msg,
+	public void handleMessage(FunctionCodeSecondary fcs, boolean dir, boolean dfc, int address, byte[] msg,
 			int userDataStart, int userDataLength) throws IOException {
 		PrimaryLinkLayerState newState = primaryState;
 
@@ -97,7 +83,7 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 				break;
 			}
 
-			SetNewState(LinkLayerState.BUSY);
+			setNewState(LinkLayerState.BUSY);
 			primaryState = newState;
 			return;
 		}
@@ -106,90 +92,86 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 		case ACK:
 			// TODO what to do if we are not waiting for a response?
-			DebugLog("PLL - received ACK");
+			debugLog("PLL - received ACK");
 			if (primaryState == PrimaryLinkLayerState.EXECUTE_RESET_REMOTE_LINK) {
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
-				SetNewState(LinkLayerState.AVAILABLE);
+				setNewState(LinkLayerState.AVAILABLE);
 			} else if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM) {
 
 				if (sendLinkLayerTestFunction)
 					sendLinkLayerTestFunction = false;
 
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
-				SetNewState(LinkLayerState.AVAILABLE);
+				setNewState(LinkLayerState.AVAILABLE);
 			}
 
 			waitingForResponse = false;
 			break;
 
 		case NACK:
-			DebugLog("PLL - received NACK");
+			debugLog("PLL - received NACK");
 			if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM) {
 				newState = PrimaryLinkLayerState.SECONDARY_LINK_LAYER_BUSY;
-				SetNewState(LinkLayerState.BUSY);
+				setNewState(LinkLayerState.BUSY);
 			}
 			break;
 
 		case RESP_USER_DATA:
 
 			newState = PrimaryLinkLayerState.IDLE;
-			SetNewState(LinkLayerState.ERROR);
+			setNewState(LinkLayerState.ERROR);
 
 			break;
 
 		case RESP_NACK_NO_DATA:
 
 			newState = PrimaryLinkLayerState.IDLE;
-			SetNewState(LinkLayerState.ERROR);
+			setNewState(LinkLayerState.ERROR);
 
 			break;
 
 		case STATUS_OF_LINK_OR_ACCESS_DEMAND:
-			DebugLog("PLL - received STATUS OF LINK");
+			debugLog("PLL - received STATUS OF LINK");
 			if (primaryState == PrimaryLinkLayerState.EXECUTE_REQUEST_STATUS_OF_LINK) {
-				DebugLog("PLL - SEND RESET REMOTE LINK to address " + linkLayerAddressOtherStation);
-				linkLayer.SendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, linkLayerAddressOtherStation,
+				debugLog("PLL - SEND RESET REMOTE LINK to address " + linkLayerAddressOtherStation);
+				linkLayer.sendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, linkLayerAddressOtherStation,
 						false, false);
 				lastSendTime = System.currentTimeMillis();
 				waitingForResponse = true;
 				newState = PrimaryLinkLayerState.EXECUTE_RESET_REMOTE_LINK;
-				SetNewState(LinkLayerState.BUSY);
+				setNewState(LinkLayerState.BUSY);
 			} else { /* illegal message */
 				newState = PrimaryLinkLayerState.IDLE;
-				SetNewState(LinkLayerState.ERROR);
+				setNewState(LinkLayerState.ERROR);
 			}
 
 			break;
 
 		case LINK_SERVICE_NOT_FUNCTIONING:
 		case LINK_SERVICE_NOT_IMPLEMENTED:
-			DebugLog("PLL - link layer service not functioning/not implemented in secondary station");
+			debugLog("PLL - link layer service not functioning/not implemented in secondary station");
 
 			if (sendLinkLayerTestFunction)
 				sendLinkLayerTestFunction = false;
 
 			if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM) {
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
-				SetNewState(LinkLayerState.AVAILABLE);
+				setNewState(LinkLayerState.AVAILABLE);
 			}
 			break;
 
 		default:
-			DebugLog("UNEXPECTED SECONDARY LINK LAYER MESSAGE");
+			debugLog("UNEXPECTED SECONDARY LINK LAYER MESSAGE");
 			break;
 		}
 
-		DebugLog("PLL RECV - old state: " + primaryState + " new state: " + newState);
+		debugLog("PLL RECV - old state: " + primaryState + " new state: " + newState);
 
 		primaryState = newState;
 
 	}
 
-	public void SendLinkLayerTestFunction() {
-		sendLinkLayerTestFunction = true;
-	}
-
-	public void RunStateMachine() {
+	public void runStateMachine() throws IOException {
 		PrimaryLinkLayerState newState = primaryState;
 
 		switch (primaryState) {
@@ -208,13 +190,13 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 			if (waitingForResponse) {
 				if (System.currentTimeMillis() > (lastSendTime + linkLayer.getTimeoutForACK())) {
-					linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_LINK_STATUS,
+					linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_LINK_STATUS,
 							linkLayerAddressOtherStation, false, false);
 					lastSendTime = System.currentTimeMillis();
 				}
 			} else {
-				DebugLog("PLL - SEND RESET REMOTE LINK to address " + linkLayerAddressOtherStation);
-				linkLayer.SendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, linkLayerAddressOtherStation,
+				debugLog("PLL - SEND RESET REMOTE LINK to address " + linkLayerAddressOtherStation);
+				linkLayer.sendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, linkLayerAddressOtherStation,
 						false, false);
 				lastSendTime = System.currentTimeMillis();
 				waitingForResponse = true;
@@ -229,11 +211,11 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 				if (System.currentTimeMillis() > (lastSendTime + linkLayer.getTimeoutForACK())) {
 					waitingForResponse = false;
 					newState = PrimaryLinkLayerState.IDLE;
-					SetNewState(LinkLayerState.ERROR);
+					setNewState(LinkLayerState.ERROR);
 				}
 			} else {
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
-				SetNewState(LinkLayerState.AVAILABLE);
+				setNewState(LinkLayerState.AVAILABLE);
 			}
 
 			break;
@@ -241,8 +223,8 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		case LINK_LAYERS_AVAILABLE:
 
 			if (sendLinkLayerTestFunction) {
-				DebugLog("PLL - SEND TEST LINK");
-				linkLayer.SendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK,
+				debugLog("PLL - SEND TEST LINK");
+				linkLayer.sendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK,
 						linkLayerAddressOtherStation, nextFcb, true);
 				nextFcb = !nextFcb;
 				lastSendTime = System.currentTimeMillis();
@@ -253,7 +235,7 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 				if (asdu != null) {
 
-					linkLayer.SendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED,
+					linkLayer.sendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED,
 							linkLayerAddressOtherStation, nextFcb, true, asdu);
 
 					nextFcb = !nextFcb;
@@ -273,19 +255,19 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 			if (System.currentTimeMillis() > (lastSendTime + linkLayer.getTimeoutForACK())) {
 
 				if (System.currentTimeMillis() > (originalSendTime + linkLayer.getTimeoutRepeat())) {
-					DebugLog("TIMEOUT: ASDU not confirmed after repeated transmission");
+					debugLog("TIMEOUT: ASDU not confirmed after repeated transmission");
 					newState = PrimaryLinkLayerState.IDLE;
-					SetNewState(LinkLayerState.ERROR);
+					setNewState(LinkLayerState.ERROR);
 				} else {
-					DebugLog("TIMEOUT: ASDU not confirmed");
+					debugLog("TIMEOUT: ASDU not confirmed");
 
 					if (sendLinkLayerTestFunction) {
-						DebugLog("PLL - REPEAT SEND RESET REMOTE LINK");
-						linkLayer.SendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK,
+						debugLog("PLL - REPEAT SEND RESET REMOTE LINK");
+						linkLayer.sendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK,
 								linkLayerAddressOtherStation, !nextFcb, true);
 					} else {
-						DebugLog("PLL - repeat last ASDU");
-						linkLayer.SendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED,
+						debugLog("PLL - repeat last ASDU");
+						linkLayer.sendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED,
 								linkLayerAddressOtherStation, !nextFcb, true, lastSendASDU);
 					}
 
@@ -304,16 +286,34 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		}
 
 		if (primaryState != newState)
-			DebugLog("PLL - old state: " + primaryState + " new state: " + newState);
+			debugLog("PLL - old state: " + primaryState + " new state: " + newState);
 
 		primaryState = newState;
 
 	}
 
-	private void DebugLog(String log) {
-		if (debugLog != null) {
-			debugLog.accept(log);
+	public void sendLinkLayerTestFunction() {
+		sendLinkLayerTestFunction = true;
+	}
+
+	/**
+	 * @param linkLayerAddressOtherStation the linkLayerAddressOtherStation to set
+	 */
+	public void setLinkLayerAddressOtherStation(int linkLayerAddressOtherStation) {
+		this.linkLayerAddressOtherStation = linkLayerAddressOtherStation;
+	}
+
+	public void setLinkLayerStateChanged(LinkLayerStateChanged handler, Object parameter) {
+		stateChangedCallback = handler;
+		stateChangedCallbackParameter = parameter;
+	}
+
+	private void setNewState(LinkLayerState newState) {
+		if (newState != state) {
+			state = newState;
+
+			if (stateChangedCallback != null)
+				stateChangedCallback.performStateChanged(stateChangedCallbackParameter, -1, newState);
 		}
-		System.out.println(log);
 	}
 }

@@ -43,6 +43,13 @@ public class SerialTransceiverFT12 {
 		this.linkLayerParameters = linkLayerParameters;
 	}
 
+	private void debugLog(String log) {
+		if (debugLog != null) {
+			debugLog.accept(log);
+		}
+		System.out.println(log);
+	}
+
 	public int getBaudRate() {
 		if (port != null)
 			return port.getBaudRate();
@@ -50,33 +57,8 @@ public class SerialTransceiverFT12 {
 			return 10000000;
 	}
 
-	/// <summary>
-	/// Sets the timeouts for receiving messages
-	/// </summary>
-	/// <param name="messageTimeout">timeout to wait for message start (first byte
-	/// in the nessage)</param>
-	/// <param name="characterTimeout">timeout to wait for next byte (character) in
-	/// a message</param>
-	public void SetTimeouts(int messageTimeout, int characterTimeout) {
-		this.messageTimeout = messageTimeout;
-		this.characterTimeout = characterTimeout;
-	}
-
-	/// <summary>
-	/// Sends the message over the wire
-	/// </summary>
-	/// <param name="msg">message data buffer</param>
-	/// <param name="msgSize">number of bytes to send</param>
-	public void SendMessage(byte[] msg, int msgSize) throws IOException {
-
-		DebugLog("SEND " + Arrays.toString(Arrays.copyOf(msg, msgSize)));
-
-		serialStream.write(msg, 0, msgSize);
-		serialStream.flush();
-	}
-
 	// read the next block of the message
-	private int ReadBytesWithTimeout(byte[] buffer, int startIndex, int count, int timeout) {
+	private int readBytesWithTimeout(byte[] buffer, int startIndex, int count, int timeout) {
 		int readByte;
 		int readBytes = 0;
 
@@ -98,19 +80,19 @@ public class SerialTransceiverFT12 {
 		return readBytes;
 	}
 
-	public void ReadNextMessage(byte[] buffer, BiFunction<byte[], Integer, Void> messageHandler) {
+	public void readNextMessage(byte[] buffer, BiFunction<byte[], Integer, Void> messageHandler) {
 		// NOTE: there is some basic decoding required to determine message start/end
 		// and synchronization failures.
 
 		try {
 
-			int read = ReadBytesWithTimeout(buffer, 0, 1, messageTimeout);
+			int read = readBytesWithTimeout(buffer, 0, 1, messageTimeout);
 
 			if (read == 1) {
 
 				if (buffer[0] == 0x68) {
 
-					int bytesRead = ReadBytesWithTimeout(buffer, 1, 1, characterTimeout);
+					int bytesRead = readBytesWithTimeout(buffer, 1, 1, characterTimeout);
 
 					if (bytesRead == 1) {
 
@@ -118,7 +100,7 @@ public class SerialTransceiverFT12 {
 
 						msgSize += 4;
 
-						int readBytes = ReadBytesWithTimeout(buffer, 2, msgSize, characterTimeout);
+						int readBytes = readBytesWithTimeout(buffer, 2, msgSize, characterTimeout);
 
 						if (readBytes == msgSize) {
 
@@ -126,16 +108,16 @@ public class SerialTransceiverFT12 {
 
 							messageHandler.apply(buffer, msgSize);
 						} else
-							DebugLog("RECV: Timeout reading variable length frame msgSize = " + msgSize
+							debugLog("RECV: Timeout reading variable length frame msgSize = " + msgSize
 									+ " readBytes = " + readBytes);
 					} else {
-						DebugLog("RECV: SYNC ERROR 1!");
+						debugLog("RECV: SYNC ERROR 1!");
 					}
 				} else if (buffer[0] == 0x10) {
 
 					int msgSize = 3 + linkLayerParameters.getAddressLength();
 
-					int readBytes = ReadBytesWithTimeout(buffer, 1, msgSize, characterTimeout);
+					int readBytes = readBytesWithTimeout(buffer, 1, msgSize, characterTimeout);
 
 					if (readBytes == msgSize) {
 
@@ -143,14 +125,14 @@ public class SerialTransceiverFT12 {
 
 						messageHandler.apply(buffer, msgSize);
 					} else
-						DebugLog("RECV: Timeout reading fixed length frame msgSize = " + msgSize + " readBytes = "
+						debugLog("RECV: Timeout reading fixed length frame msgSize = " + msgSize + " readBytes = "
 								+ readBytes);
 				} else if (buffer[0] == 0xe5) {
 					int msgSize = 1;
 
 					messageHandler.apply(buffer, msgSize);
 				} else {
-					DebugLog("RECV: SYNC ERROR 2! value = " + buffer[0]);
+					debugLog("RECV: SYNC ERROR 2! value = " + buffer[0]);
 				}
 			}
 
@@ -158,11 +140,29 @@ public class SerialTransceiverFT12 {
 		}
 	}
 
-	private void DebugLog(String log) {
-		if (debugLog != null) {
-			debugLog.accept(log);
-		}
-		System.out.println(log);
+	/// <summary>
+	/// Sends the message over the wire
+	/// </summary>
+	/// <param name="msg">message data buffer</param>
+	/// <param name="msgSize">number of bytes to send</param>
+	public void sendMessage(byte[] msg, int msgSize) throws IOException {
+
+		debugLog("SEND " + Arrays.toString(Arrays.copyOf(msg, msgSize)));
+
+		serialStream.write(msg, 0, msgSize);
+		serialStream.flush();
+	}
+
+	/// <summary>
+	/// Sets the timeouts for receiving messages
+	/// </summary>
+	/// <param name="messageTimeout">timeout to wait for message start (first byte
+	/// in the nessage)</param>
+	/// <param name="characterTimeout">timeout to wait for next byte (character) in
+	/// a message</param>
+	public void setTimeouts(int messageTimeout, int characterTimeout) {
+		this.messageTimeout = messageTimeout;
+		this.characterTimeout = characterTimeout;
 	}
 
 }

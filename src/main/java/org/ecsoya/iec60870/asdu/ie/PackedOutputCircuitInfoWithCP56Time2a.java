@@ -11,56 +11,14 @@ import org.ecsoya.iec60870.asdu.ie.value.OutputCircuitInfo;
 import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptorP;
 
 public class PackedOutputCircuitInfoWithCP56Time2a extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 11;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_EP_TF_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private OutputCircuitInfo oci;
-
-	public final OutputCircuitInfo getOCI() {
-		return this.oci;
-	}
 
 	private QualityDescriptorP qdp;
 
-	public final QualityDescriptorP getQDP() {
-		return this.qdp;
-	}
-
 	private CP16Time2a operatingTime;
-
-	public final CP16Time2a getOperatingTime() {
-		return this.operatingTime;
-	}
 
 	private CP56Time2a timestamp;
 
-	public final CP56Time2a getTimestamp() {
-		return this.timestamp;
-	}
-
-	public PackedOutputCircuitInfoWithCP56Time2a(int objectAddress, OutputCircuitInfo oci, QualityDescriptorP qdp,
-			CP16Time2a operatingTime, CP56Time2a timestamp) {
-		super(objectAddress);
-		this.oci = oci;
-		this.qdp = qdp;
-		this.operatingTime = operatingTime;
-		this.timestamp = timestamp;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal PackedOutputCircuitInfoWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public PackedOutputCircuitInfoWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -68,7 +26,7 @@ public class PackedOutputCircuitInfoWithCP56Time2a extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -83,9 +41,18 @@ public class PackedOutputCircuitInfoWithCP56Time2a extends InformationObject {
 		timestamp = new CP56Time2a(msg, startIndex);
 	}
 
+	public PackedOutputCircuitInfoWithCP56Time2a(int objectAddress, OutputCircuitInfo oci, QualityDescriptorP qdp,
+			CP16Time2a operatingTime, CP56Time2a timestamp) {
+		super(objectAddress);
+		this.oci = oci;
+		this.qdp = qdp;
+		this.operatingTime = operatingTime;
+		this.timestamp = timestamp;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.setNextByte(oci.getEncodedValue());
 
@@ -94,5 +61,36 @@ public class PackedOutputCircuitInfoWithCP56Time2a extends InformationObject {
 		frame.appendBytes(operatingTime.getEncodedValue());
 
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 11;
+	}
+
+	public final OutputCircuitInfo getOCI() {
+		return this.oci;
+	}
+
+	public final CP16Time2a getOperatingTime() {
+		return this.operatingTime;
+	}
+
+	public final QualityDescriptorP getQDP() {
+		return this.qdp;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	public final CP56Time2a getTimestamp() {
+		return this.timestamp;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_EP_TF_1;
 	}
 }

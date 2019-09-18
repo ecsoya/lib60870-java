@@ -11,25 +11,25 @@ public interface IFileProvider {
 	 * 
 	 * @return The CA
 	 */
-	int GetCA();
+	int getCommonAddress();
 
-	/**
-	 * Returns the IOA (information object address of the file)
-	 * 
-	 * @return The IOA
-	 */
-	int GetIOA();
-
-	NameOfFile GetNameOfFile();
-
-	LocalDateTime GetFileDate();
+	LocalDateTime getFileDate();
 
 	/**
 	 * Gets the size of the file in bytes
 	 * 
 	 * @return The file size in bytes
 	 */
-	int GetFileSize();
+	int getFileSize();
+
+	/**
+	 * Returns the IOA (information object address of the file)
+	 * 
+	 * @return The IOA
+	 */
+	int getInformationObjectAddress();
+
+	NameOfFile getNameOfFile();
 
 	/**
 	 * Gets the size of a section in byzes
@@ -37,7 +37,7 @@ public interface IFileProvider {
 	 * @return The section size in bytes or -1 if the section does not exist
 	 * @param sectionNumber Number of section (starting with 0)
 	 */
-	int GetSectionSize(int sectionNumber);
+	int getSectionSize(int sectionNumber);
 
 	/**
 	 * Gets the segment data.
@@ -48,7 +48,7 @@ public interface IFileProvider {
 	 * @param segmentSize   Segment size.
 	 * @param segmentData   Segment data.
 	 */
-	boolean GetSegmentData(int sectionNumber, int offset, int segmentSize, byte[] segmentData);
+	boolean getSegmentData(int sectionNumber, int offset, int segmentSize, byte[] segmentData);
 
 	/**
 	 * Indicates that the transfer is complete. When success equals true the file
@@ -56,5 +56,5 @@ public interface IFileProvider {
 	 * 
 	 * @param success If set to <c>true</c> success.
 	 */
-	void TransferComplete(boolean success);
+	void transferComplete(boolean success);
 }

@@ -3,13 +3,13 @@ package org.ecsoya.iec60870.layer;
 import org.ecsoya.iec60870.BufferFrame;
 
 public interface ISecondaryApplicationLayer {
-	boolean IsClass1DataAvailable();
+	BufferFrame getClass1Data();
 
-	BufferFrame GetClass1Data();
+	BufferFrame getCLass2Data();
 
-	BufferFrame GetCLass2Data();
+	boolean handleReceivedData(byte[] msg, boolean isBroadcast, int userDataStart, int userDataLength);
 
-	boolean HandleReceivedData(byte[] msg, boolean isBroadcast, int userDataStart, int userDataLength);
+	boolean isClass1DataAvailable();
 
-	void ResetCUReceived(boolean onlyFCB);
+	void resetCUReceived(boolean onlyFCB);
 }

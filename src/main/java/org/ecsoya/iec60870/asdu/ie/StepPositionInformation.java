@@ -36,77 +36,12 @@ import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
  */
 
 public class StepPositionInformation extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 2;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ST_NA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private int value;
-
-	/**
-	 * Step position (range -64 ... +63)
-	 * 
-	 * <value>The value.</value>
-	 */
-	public final int getValue() {
-		return this.value;
-	}
-
-	public final void setValue(int value) {
-		if (value > 63) {
-			this.value = 63;
-		} else if (value < -64) {
-			this.value = -64;
-		} else {
-			this.value = value;
-		}
-	}
 
 	private boolean isTransient;
 
-	/**
-	 * Gets a value indicating whether this
-	 * <see cref="lib60870.StepPositionInformation"/> is in transient state.
-	 * 
-	 * <value><c>true</c> if transient; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getTransient() {
-		return this.isTransient;
-	}
-
-	public final void setTransient(boolean value) {
-		this.isTransient = value;
-	}
-
 	private QualityDescriptor quality;
 
-	public final QualityDescriptor getQuality() {
-		return this.quality;
-	}
-
-	public StepPositionInformation(int ioa, int value, boolean isTransient, QualityDescriptor quality) {
-		super(ioa);
-		if ((value < -64) || (value > 63)) {
-			throw new IndexOutOfBoundsException("value has to be in range -64 .. 63");
-		}
-
-		setValue(value);
-		setTransient(isTransient);
-		this.quality = quality;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal StepPositionInformation(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public StepPositionInformation(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -114,13 +49,11 @@ public class StepPositionInformation extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
 		/* parse VTI (value with transient state indication) */
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: byte vti = msg [startIndex++];
 		byte vti = msg[startIndex++];
 
 		isTransient = ((vti & 0x80) == 0x80);
@@ -134,21 +67,26 @@ public class StepPositionInformation extends InformationObject {
 		quality = new QualityDescriptor(msg[startIndex++]);
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public StepPositionInformation(int ioa, int value, boolean isTransient, QualityDescriptor quality) {
+		super(ioa);
+		if ((value < -64) || (value > 63)) {
+			throw new IndexOutOfBoundsException("value has to be in range -64 .. 63");
+		}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: byte vti;
+		setValue(value);
+		setTransient(isTransient);
+		this.quality = quality;
+	}
+
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+
 		byte vti;
 
 		if (value < 0) {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: vti = (byte)(value + 128);
 			vti = (byte) (value + 128);
 		} else {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: vti = (byte)value;
 			vti = (byte) value;
 		}
 
@@ -159,6 +97,58 @@ public class StepPositionInformation extends InformationObject {
 		frame.setNextByte(vti);
 
 		frame.setNextByte(quality.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 2;
+	}
+
+	public final QualityDescriptor getQuality() {
+		return this.quality;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	/**
+	 * Gets a value indicating whether this
+	 * <see cref="lib60870.StepPositionInformation"/> is in transient state.
+	 * 
+	 * <value><c>true</c> if transient; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getTransient() {
+		return this.isTransient;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ST_NA_1;
+	}
+
+	/**
+	 * Step position (range -64 ... +63)
+	 * 
+	 * <value>The value.</value>
+	 */
+	public final int getValue() {
+		return this.value;
+	}
+
+	public final void setTransient(boolean value) {
+		this.isTransient = value;
+	}
+
+	public final void setValue(int value) {
+		if (value > 63) {
+			this.value = 63;
+		} else if (value < -64) {
+			this.value = -64;
+		} else {
+			this.value = value;
+		}
 	}
 
 }

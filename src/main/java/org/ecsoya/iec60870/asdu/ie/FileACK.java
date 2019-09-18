@@ -27,7 +27,7 @@ public class FileACK extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -58,17 +58,28 @@ public class FileACK extends InformationObject {
 		}
 	}
 
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
+
+		frame.setNextByte(nameOfSection);
+
+		frame.setNextByte(afq);
+	}
+
 	public AcknowledgeQualifier getAckQualifier() {
 		return AcknowledgeQualifier.forValue(afq & 0x0f);
 	}
 
-	public FileError getErrorCode() {
-		return FileError.forValue(afq / 0x10);
+	@Override
+	public int getEncodedSize() {
+		return 4;
 	}
 
-	@Override
-	public int GetEncodedSize() {
-		return 4;
+	public FileError getErrorCode() {
+		return FileError.forValue(afq / 0x10);
 	}
 
 	@Override
@@ -79,16 +90,5 @@ public class FileACK extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.F_AF_NA_1;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
-
-		frame.setNextByte(nameOfSection);
-
-		frame.setNextByte(afq);
 	}
 }

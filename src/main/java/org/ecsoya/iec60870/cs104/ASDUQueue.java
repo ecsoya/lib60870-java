@@ -10,16 +10,16 @@ import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import tangible.OutObject;
 
 public class ASDUQueue {
-	private enum QueueEntryState {
-		NOT_USED,
-		WAITING_FOR_TRANSMISSION,
-		SENT_BUT_NOT_CONFIRMED
-	}
-
 	private static class ASDUQueueEntry {
 		public long entryTimestamp;
 		public BufferFrame asdu;
 		public QueueEntryState state;
+	}
+
+	private enum QueueEntryState {
+		NOT_USED,
+		WAITING_FOR_TRANSMISSION,
+		SENT_BUT_NOT_CONFIRMED
 	}
 
 	// Queue for messages (ASDUs)
@@ -31,7 +31,7 @@ public class ASDUQueue {
 
 	private ApplicationLayerParameters parameters;
 
-	private Consumer<String> DebugLog = null;
+	private Consumer<String> debugLog = null;
 
 	public ASDUQueue(int maxQueueSize, ApplicationLayerParameters parameters, Consumer<String> DebugLog) {
 		enqueuedASDUs = new ASDUQueueEntry[maxQueueSize];
@@ -46,10 +46,16 @@ public class ASDUQueue {
 		this.numberOfAsduInQueue = 0;
 		this.maxQueueSize = maxQueueSize;
 		this.parameters = parameters;
-		this.DebugLog = DebugLog;
+		this.debugLog = DebugLog;
 	}
 
-	public void EnqueueAsdu(ASDU asdu) {
+	private void debugLog(String msg) {
+		if (debugLog != null) {
+			debugLog.accept(msg);
+		}
+	}
+
+	public void enqueueAsdu(ASDU asdu) {
 		synchronized (enqueuedASDUs) {
 
 			if (oldestQueueEntry == -1) {
@@ -78,21 +84,11 @@ public class ASDUQueue {
 			}
 		}
 
-		DebugLog("Queue contains " + numberOfAsduInQueue + " messages (oldest: " + oldestQueueEntry + " latest: "
+		debugLog("Queue contains " + numberOfAsduInQueue + " messages (oldest: " + oldestQueueEntry + " latest: "
 				+ latestQueueEntry + ")");
 	}
 
-	public void LockASDUQueue() {
-//		Monitor.Enter(enqueuedASDUs);
-		LockSupport.park(enqueuedASDUs);
-	}
-
-	public void UnlockASDUQueue() {
-//		Monitor.Exit(enqueuedASDUs);
-//		LockSupport.unpark(thread);
-	}
-
-	public BufferFrame GetNextWaitingASDU(OutObject<Long> timestampWrapper, OutObject<Integer> indexWrapper) {
+	public BufferFrame getNextWaitingASDU(OutObject<Long> timestampWrapper, OutObject<Integer> indexWrapper) {
 		long timestamp = 0;
 		int index = -1;
 
@@ -134,18 +130,12 @@ public class ASDUQueue {
 		return null;
 	}
 
-	public void UnmarkAllASDUs() {
-		synchronized (enqueuedASDUs) {
-			if (numberOfAsduInQueue > 0) {
-				for (int i = 0; i < enqueuedASDUs.length; i++) {
-					if (enqueuedASDUs[i].state == QueueEntryState.SENT_BUT_NOT_CONFIRMED)
-						enqueuedASDUs[i].state = QueueEntryState.WAITING_FOR_TRANSMISSION;
-				}
-			}
-		}
+	public void lockASDUQueue() {
+//		Monitor.Enter(enqueuedASDUs);
+		LockSupport.park(enqueuedASDUs);
 	}
 
-	public void MarkASDUAsConfirmed(int index, long timestamp) {
+	public void markASDUAsConfirmed(int index, long timestamp) {
 		if (enqueuedASDUs == null)
 			return;
 
@@ -164,7 +154,7 @@ public class ASDUQueue {
 
 						while (enqueuedASDUs[currentIndex].state == QueueEntryState.SENT_BUT_NOT_CONFIRMED) {
 
-							DebugLog("Remove from queue with index " + currentIndex);
+							debugLog("Remove from queue with index " + currentIndex);
 
 							enqueuedASDUs[currentIndex].state = QueueEntryState.NOT_USED;
 							enqueuedASDUs[currentIndex].entryTimestamp = 0;
@@ -196,7 +186,7 @@ public class ASDUQueue {
 
 						}
 
-						DebugLog("queue state: noASDUs: " + numberOfAsduInQueue + " oldest: " + oldestQueueEntry
+						debugLog("queue state: noASDUs: " + numberOfAsduInQueue + " oldest: " + oldestQueueEntry
 								+ " latest: " + latestQueueEntry);
 					}
 				}
@@ -204,9 +194,19 @@ public class ASDUQueue {
 		}
 	}
 
-	private void DebugLog(String msg) {
-		if (DebugLog != null) {
-			DebugLog.accept(msg);
+	public void unlockASDUQueue() {
+//		Monitor.Exit(enqueuedASDUs);
+//		LockSupport.unpark(thread);
+	}
+
+	public void unmarkAllASDUs() {
+		synchronized (enqueuedASDUs) {
+			if (numberOfAsduInQueue > 0) {
+				for (int i = 0; i < enqueuedASDUs.length; i++) {
+					if (enqueuedASDUs[i].state == QueueEntryState.SENT_BUT_NOT_CONFIRMED)
+						enqueuedASDUs[i].state = QueueEntryState.WAITING_FOR_TRANSMISSION;
+				}
+			}
 		}
 	}
 }

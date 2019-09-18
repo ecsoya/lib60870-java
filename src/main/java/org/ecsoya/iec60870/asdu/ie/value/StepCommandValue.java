@@ -40,8 +40,11 @@ public enum StepCommandValue {
 
 	public static final int SIZE = java.lang.Integer.SIZE;
 
-	private int intValue;
 	private static java.util.HashMap<Integer, StepCommandValue> mappings;
+
+	public static StepCommandValue forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, StepCommandValue> getMappings() {
 		if (mappings == null) {
@@ -54,6 +57,8 @@ public enum StepCommandValue {
 		return mappings;
 	}
 
+	private int intValue;
+
 	private StepCommandValue(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -61,9 +66,5 @@ public enum StepCommandValue {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static StepCommandValue forValue(int value) {
-		return getMappings().get(value);
 	}
 }

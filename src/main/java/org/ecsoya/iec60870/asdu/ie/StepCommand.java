@@ -40,6 +40,16 @@ public class StepCommand extends DoubleCommand {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.DoubleCommand#getSupportsSequence()
+	 */
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see org.ecsoya.iec60870.asdu.ie.DoubleCommand#getType()
 	 */
 	@Override
@@ -49,16 +59,6 @@ public class StepCommand extends DoubleCommand {
 
 	public StepCommandValue getValue() {
 		return value;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.DoubleCommand#getSupportsSequence()
-	 */
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
 	}
 
 }

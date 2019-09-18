@@ -17,18 +17,6 @@ public class StepPositionWithCP56Time2a extends StepPositionInformation {
 	private CP56Time2a timestamp;
 
 	/**
-	 * @param ioa
-	 * @param value
-	 * @param isTransient
-	 * @param quality
-	 */
-	public StepPositionWithCP56Time2a(int ioa, int value, boolean isTransient, QualityDescriptor quality,
-			CP56Time2a timestamp) {
-		super(ioa, value, isTransient, quality);
-		this.timestamp = timestamp;
-	}
-
-	/**
 	 * @param parameters
 	 * @param msg
 	 * @param startIndex
@@ -41,7 +29,7 @@ public class StepPositionWithCP56Time2a extends StepPositionInformation {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 2; /* skip VTI + quality */
@@ -50,8 +38,20 @@ public class StepPositionWithCP56Time2a extends StepPositionInformation {
 		timestamp = new CP56Time2a(msg, startIndex);
 	}
 
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	/**
+	 * @param ioa
+	 * @param value
+	 * @param isTransient
+	 * @param quality
+	 */
+	public StepPositionWithCP56Time2a(int ioa, int value, boolean isTransient, QualityDescriptor quality,
+			CP56Time2a timestamp) {
+		super(ioa, value, isTransient, quality);
+		this.timestamp = timestamp;
+	}
+
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.appendBytes(timestamp.getEncodedValue());
 	}
@@ -62,18 +62,8 @@ public class StepPositionWithCP56Time2a extends StepPositionInformation {
 	 * @see org.ecsoya.iec60870.asdu.ie.StepPositionInformation#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 9;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.StepPositionInformation#getType()
-	 */
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ST_TB_1;
 	}
 
 	/*
@@ -85,5 +75,15 @@ public class StepPositionWithCP56Time2a extends StepPositionInformation {
 	@Override
 	public boolean getSupportsSequence() {
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.StepPositionInformation#getType()
+	 */
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ST_TB_1;
 	}
 }

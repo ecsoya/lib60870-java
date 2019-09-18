@@ -31,13 +31,9 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 		this.HandleApplicationLayer = handleApplicationLayer;
 	}
 
-	private void SendStatusOfLink(int address) throws IOException {
-		linkLayer.SendFixedFrameSecondary(FunctionCodeSecondary.STATUS_OF_LINK_OR_ACCESS_DEMAND, address, false, false);
-	}
-
-	private boolean CheckFCB(boolean fcb) {
+	private boolean checkFCB(boolean fcb) {
 		if (fcb != expectedFcb) {
-			DebugLog("ERROR: Frame count bit (FCB) invalid!");
+			debugLog("ERROR: Frame count bit (FCB) invalid!");
 			// TODO change link status
 			return false;
 		} else {
@@ -46,11 +42,18 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 		}
 	}
 
-	public void HandleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb, boolean fcv,
+	private void debugLog(String log) {
+		if (debugLog != null) {
+			debugLog.accept(log);
+		}
+		System.out.println(log);
+	}
+
+	public void handleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb, boolean fcv,
 			byte[] msg, int userDataStart, int userDataLength) throws IOException {
 
 		if (fcv) {
-			if (CheckFCB(fcb) == false)
+			if (checkFCB(fcb) == false)
 				return;
 		}
 
@@ -58,62 +61,59 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 
 		case RESET_REMOTE_LINK:
 			expectedFcb = true;
-			DebugLog("SLL - RECV RESET REMOTE LINK");
+			debugLog("SLL - RECV RESET REMOTE LINK");
 
 			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
-				linkLayer.SendSingleCharACK();
+				linkLayer.sendSingleCharACK();
 			else
-				linkLayer.SendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
 
 			break;
 
 		case TEST_FUNCTION_FOR_LINK:
-			DebugLog("SLL -TEST FUNCTION FOR LINK");
+			debugLog("SLL -TEST FUNCTION FOR LINK");
 			// TODO check if DCF has to be sent
 			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
-				linkLayer.SendSingleCharACK();
+				linkLayer.sendSingleCharACK();
 			else
-				linkLayer.SendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
 			break;
 
 		case USER_DATA_CONFIRMED:
-			DebugLog("SLL - USER DATA CONFIRMED");
+			debugLog("SLL - USER DATA CONFIRMED");
 			if (userDataLength > 0) {
 
 				if (HandleApplicationLayer.handle(address, msg, userDataStart, userDataLength))
-					linkLayer.SendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+					linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
 			}
 			break;
 
 		case USER_DATA_NO_REPLY:
-			DebugLog("SLL - USER DATA NO REPLY");
+			debugLog("SLL - USER DATA NO REPLY");
 			if (userDataLength > 0) {
 				HandleApplicationLayer.handle(address, msg, userDataStart, userDataLength);
 			}
 			break;
 
 		case REQUEST_LINK_STATUS:
-			DebugLog("SLL - RECV REQUEST LINK STATUS");
-			SendStatusOfLink(linkLayerAddress);
+			debugLog("SLL - RECV REQUEST LINK STATUS");
+			sendStatusOfLink(linkLayerAddress);
 			break;
 
 		default:
-			DebugLog("SLL - UNEXPECTED LINK LAYER MESSAGE");
-			linkLayer.SendFixedFrameSecondary(FunctionCodeSecondary.LINK_SERVICE_NOT_IMPLEMENTED, linkLayerAddress,
+			debugLog("SLL - UNEXPECTED LINK LAYER MESSAGE");
+			linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.LINK_SERVICE_NOT_IMPLEMENTED, linkLayerAddress,
 					false, false);
 			break;
 
 		}
 	}
 
-	public void RunStateMachine() {
+	public void runStateMachine() {
 
 	}
 
-	private void DebugLog(String log) {
-		if (debugLog != null) {
-			debugLog.accept(log);
-		}
-		System.out.println(log);
+	private void sendStatusOfLink(int address) throws IOException {
+		linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.STATUS_OF_LINK_OR_ACCESS_DEMAND, address, false, false);
 	}
 }

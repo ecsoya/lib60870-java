@@ -98,44 +98,7 @@ public class ASDU {
 	private byte[] payload = null;
 	private ArrayList<InformationObject> informationObjects = null;
 
-	/**
-	 * Initializes a new instance of the <see cref="lib60870.CS101.ASDU"/> class.
-	 * 
-	 * @param parameters application layer parameters to be used for
-	 *                   encoding/decoding
-	 * @param cot        Cause of transmission (COT)
-	 * @param isTest     If set to <c>true</c> ASDU is a test ASDU.
-	 * @param isNegative If set to <c>true</c> is negative confirmation.
-	 * @param oa         originator address (OA)
-	 * @param ca         common address of the ASDU (CA)
-	 * @param isSequence If set to <c>true</c> is a sequence of information objects.
-	 */
-	public ASDU(ApplicationLayerParameters parameters, CauseOfTransmission cot, boolean isTest, boolean isNegative,
-			byte oa, int ca, boolean isSequence) {
-		this(parameters, TypeID.M_SP_NA_1, cot, isTest, isNegative, oa, ca, isSequence);
-		this.hasTypeId = false;
-	}
-
-	public ASDU(ApplicationLayerParameters parameters, TypeID typeId, CauseOfTransmission cot, boolean isTest,
-			boolean isNegative, byte oa, int ca, boolean isSequence) {
-		this.parameters = parameters;
-		this.typeId = typeId;
-		this.causeOfTransmission = cot;
-		this.isTest = isTest;
-		this.isNegative = isNegative;
-		this.originatorAddress = oa;
-		this.commonAddress = ca;
-		this.spaceLeft = parameters.getMaxAsduLength() - parameters.getSizeOfTypeId() - parameters.getSizeOfVSQ()
-				- parameters.getSizeOfCA() - parameters.getSizeOfCOT();
-
-		if (isSequence) {
-			this.variableStructureQualifier = (byte) 0x80;
-		} else {
-			this.variableStructureQualifier = 0;
-		}
-
-		this.hasTypeId = true;
-	}
+	private PrivateInformationObjectTypes privateObjectTypes = null;
 
 	public ASDU(ApplicationLayerParameters parameters, byte[] msg, int bufPos, int msgLength)
 			throws ASDUParsingException {
@@ -191,6 +154,45 @@ public class ASDU {
 	}
 
 	/**
+	 * Initializes a new instance of the <see cref="lib60870.CS101.ASDU"/> class.
+	 * 
+	 * @param parameters application layer parameters to be used for
+	 *                   encoding/decoding
+	 * @param cot        Cause of transmission (COT)
+	 * @param isTest     If set to <c>true</c> ASDU is a test ASDU.
+	 * @param isNegative If set to <c>true</c> is negative confirmation.
+	 * @param oa         originator address (OA)
+	 * @param ca         common address of the ASDU (CA)
+	 * @param isSequence If set to <c>true</c> is a sequence of information objects.
+	 */
+	public ASDU(ApplicationLayerParameters parameters, CauseOfTransmission cot, boolean isTest, boolean isNegative,
+			byte oa, int ca, boolean isSequence) {
+		this(parameters, TypeID.M_SP_NA_1, cot, isTest, isNegative, oa, ca, isSequence);
+		this.hasTypeId = false;
+	}
+
+	public ASDU(ApplicationLayerParameters parameters, TypeID typeId, CauseOfTransmission cot, boolean isTest,
+			boolean isNegative, byte oa, int ca, boolean isSequence) {
+		this.parameters = parameters;
+		this.typeId = typeId;
+		this.causeOfTransmission = cot;
+		this.isTest = isTest;
+		this.isNegative = isNegative;
+		this.originatorAddress = oa;
+		this.commonAddress = ca;
+		this.spaceLeft = parameters.getMaxAsduLength() - parameters.getSizeOfTypeId() - parameters.getSizeOfVSQ()
+				- parameters.getSizeOfCA() - parameters.getSizeOfCOT();
+
+		if (isSequence) {
+			this.variableStructureQualifier = (byte) 0x80;
+		} else {
+			this.variableStructureQualifier = 0;
+		}
+
+		this.hasTypeId = true;
+	}
+
+	/**
 	 * Adds an information object to the ASDU.
 	 * 
 	 * This function add an information object (InformationObject) to the ASDU.
@@ -222,7 +224,7 @@ public class ASDU {
 			return false;
 		}
 
-		int objectSize = io.GetEncodedSize();
+		int objectSize = io.getEncodedSize();
 
 		if (isSequence() == false) {
 			objectSize += parameters.getSizeOfIOA();
@@ -249,6 +251,19 @@ public class ASDU {
 		} else {
 			return false;
 		}
+	}
+
+	public byte[] asByteArray() {
+		int expectedSize = parameters.getMaxAsduLength() - spaceLeft;
+
+		BufferFrame frame = new BufferFrame(new byte[expectedSize], 0);
+
+		encode(frame, parameters);
+
+		if (frame.getMsgSize() == expectedSize)
+			return frame.getBuffer();
+		else
+			return null;
 	}
 
 	public final void encode(Frame frame, ApplicationLayerParameters parameters) {
@@ -286,132 +301,25 @@ public class ASDU {
 			for (InformationObject io : informationObjects) {
 
 				if (isFirst) {
-					io.Encode(frame, parameters, false);
+					io.encode(frame, parameters, false);
 					isFirst = false;
 				} else {
 					if (isSequence())
-						io.Encode(frame, parameters, true);
+						io.encode(frame, parameters, true);
 					else
-						io.Encode(frame, parameters, false);
+						io.encode(frame, parameters, false);
 				}
 
 			}
 		}
 	}
 
-	public byte[] asByteArray() {
-		int expectedSize = parameters.getMaxAsduLength() - spaceLeft;
-
-		BufferFrame frame = new BufferFrame(new byte[expectedSize], 0);
-
-		encode(frame, parameters);
-
-		if (frame.getMsgSize() == expectedSize)
-			return frame.getBuffer();
-		else
-			return null;
-	}
-
-	/// <summary>
-	/// Gets the type identifier (TI).
-	/// </summary>
-	/// <value>The type identifier.</value>
-	public TypeID getTypeId() {
-		return this.typeId;
-	}
-
 	public CauseOfTransmission getCauseOfTransmission() {
 		return causeOfTransmission;
 	}
 
-	public void setCauseOfTransmission(CauseOfTransmission cot) {
-		this.causeOfTransmission = cot;
-	}
-
-	/**
-	 * @return the oa
-	 */
-	public byte getOriginatorAddress() {
-		return originatorAddress;
-	}
-
-	/**
-	 * @param originatorAddress the oa to set
-	 */
-	public void setOriginatorAddress(byte originatorAddress) {
-		this.originatorAddress = originatorAddress;
-	}
-
-	/**
-	 * @return the isTest
-	 */
-	public boolean isTest() {
-		return isTest;
-	}
-
-	/**
-	 * @return the isNegative
-	 */
-	public boolean isNegative() {
-		return isNegative;
-	}
-
-	/**
-	 * @param isNegative the isNegative to set
-	 */
-	public void setNegative(boolean isNegative) {
-		this.isNegative = isNegative;
-	}
-
 	public int getCommonAddress() {
 		return commonAddress;
-	}
-
-	public void setCommonAddress(int commonAddress) {
-		this.commonAddress = commonAddress;
-	}
-
-	/// <summary>
-	/// Gets a value indicating whether this instance is a sequence of information
-	/// objects
-	/// </summary>
-	/// A sequence of information objects contains multiple information objects with
-	/// successive
-	/// information object addresses (IOA).
-	/// <value><c>true</c> if this instance is a sequence; otherwise,
-	/// <c>false</c>.</value>
-	public boolean isSequence() {
-		if ((variableStructureQualifier & 0x80) != 0)
-			return true;
-		else
-			return false;
-	}
-
-	/// <summary>
-	/// Gets the number of elements (information objects) of the ASDU
-	/// </summary>
-	/// <value>The number of information objects.</value>
-	public int getNumberOfElements() {
-		return (variableStructureQualifier & 0x7f);
-	}
-
-	private PrivateInformationObjectTypes privateObjectTypes = null;
-
-	/// <summary>
-	/// Gets the element (information object) with the specified index. This
-	/// function supports private information object types.
-	/// </summary>
-	/// <returns>the information object at index</returns>
-	/// <param name="index">index of the element (starting with 0)</param>
-	/// <param name="privateObjectTypes">known private information object
-	/// types</param>
-	/// <exception cref="lib60870.ASDUParsingException">Thrown when there is a
-	/// problem parsing the ASDU</exception>
-	public InformationObject getElement(int index, PrivateInformationObjectTypes privateObjectTypes)
-			throws ASDUParsingException {
-		this.privateObjectTypes = privateObjectTypes;
-
-		return getElement(index);
 	}
 
 	/// <summary>
@@ -1288,21 +1196,21 @@ public class ASDU {
 		default:
 			if (privateObjectTypes != null) {
 
-				IPrivateIOFactory ioFactory = privateObjectTypes.GetFactory(typeId);
+				IPrivateIOFactory ioFactory = privateObjectTypes.getFactory(typeId);
 
 				if (ioFactory != null) {
 
-					elementSize = parameters.getSizeOfIOA() + ioFactory.GetEncodedSize();
+					elementSize = parameters.getSizeOfIOA() + ioFactory.getEncodedSize();
 
 					if (isSequence()) {
 
 						int ioa = InformationObject.ParseInformationObjectAddress(parameters, payload, 0);
 
-						retVal = ioFactory.Decode(parameters, payload, index * elementSize, true);
+						retVal = ioFactory.decode(parameters, payload, index * elementSize, true);
 
 						retVal.setObjectAddress(ioa + index);
 					} else
-						retVal = ioFactory.Decode(parameters, payload, index * elementSize, false);
+						retVal = ioFactory.decode(parameters, payload, index * elementSize, false);
 
 				}
 			}
@@ -1313,6 +1221,98 @@ public class ASDU {
 			throw new ASDUParsingException("Unknown ASDU type id:" + typeId);
 
 		return retVal;
+	}
+
+	/// <summary>
+	/// Gets the element (information object) with the specified index. This
+	/// function supports private information object types.
+	/// </summary>
+	/// <returns>the information object at index</returns>
+	/// <param name="index">index of the element (starting with 0)</param>
+	/// <param name="privateObjectTypes">known private information object
+	/// types</param>
+	/// <exception cref="lib60870.ASDUParsingException">Thrown when there is a
+	/// problem parsing the ASDU</exception>
+	public InformationObject getElement(int index, PrivateInformationObjectTypes privateObjectTypes)
+			throws ASDUParsingException {
+		this.privateObjectTypes = privateObjectTypes;
+
+		return getElement(index);
+	}
+
+	/// <summary>
+	/// Gets the number of elements (information objects) of the ASDU
+	/// </summary>
+	/// <value>The number of information objects.</value>
+	public int getNumberOfElements() {
+		return (variableStructureQualifier & 0x7f);
+	}
+
+	/**
+	 * @return the oa
+	 */
+	public byte getOriginatorAddress() {
+		return originatorAddress;
+	}
+
+	/// <summary>
+	/// Gets the type identifier (TI).
+	/// </summary>
+	/// <value>The type identifier.</value>
+	public TypeID getTypeId() {
+		return this.typeId;
+	}
+
+	/**
+	 * @return the isNegative
+	 */
+	public boolean isNegative() {
+		return isNegative;
+	}
+
+	/// <summary>
+	/// Gets a value indicating whether this instance is a sequence of information
+	/// objects
+	/// </summary>
+	/// A sequence of information objects contains multiple information objects with
+	/// successive
+	/// information object addresses (IOA).
+	/// <value><c>true</c> if this instance is a sequence; otherwise,
+	/// <c>false</c>.</value>
+	public boolean isSequence() {
+		if ((variableStructureQualifier & 0x80) != 0)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * @return the isTest
+	 */
+	public boolean isTest() {
+		return isTest;
+	}
+
+	public void setCauseOfTransmission(CauseOfTransmission cot) {
+		this.causeOfTransmission = cot;
+	}
+
+	public void setCommonAddress(int commonAddress) {
+		this.commonAddress = commonAddress;
+	}
+
+	/**
+	 * @param isNegative the isNegative to set
+	 */
+	public void setNegative(boolean isNegative) {
+		this.isNegative = isNegative;
+	}
+
+	/**
+	 * @param originatorAddress the oa to set
+	 */
+	public void setOriginatorAddress(byte originatorAddress) {
+		this.originatorAddress = originatorAddress;
 	}
 
 	public String

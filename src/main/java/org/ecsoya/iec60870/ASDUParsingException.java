@@ -27,13 +27,6 @@ public class ASDUParsingException extends Exception {
 	}
 
 	/**
-	 * @param cause
-	 */
-	public ASDUParsingException(Throwable cause) {
-		super(cause);
-	}
-
-	/**
 	 * @param message
 	 * @param cause
 	 */
@@ -50,6 +43,13 @@ public class ASDUParsingException extends Exception {
 	public ASDUParsingException(String message, Throwable cause, boolean enableSuppression,
 			boolean writableStackTrace) {
 		super(message, cause, enableSuppression, writableStackTrace);
+	}
+
+	/**
+	 * @param cause
+	 */
+	public ASDUParsingException(Throwable cause) {
+		super(cause);
 	}
 
 }

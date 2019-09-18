@@ -69,47 +69,47 @@ public class APCIParameters {
 		return this.k;
 	}
 
-	public final void setK(int value) {
-		k = value;
-	}
-
-	public final int getW() {
-		return this.w;
-	}
-
-	public final void setW(int value) {
-		w = value;
-	}
-
 	public final int getT0() {
 		return this.t0;
-	}
-
-	public final void setT0(int value) {
-		t0 = value;
 	}
 
 	public final int getT1() {
 		return this.t1;
 	}
 
-	public final void setT1(int value) {
-		t1 = value;
-	}
-
 	public final int getT2() {
 		return this.t2;
-	}
-
-	public final void setT2(int value) {
-		t2 = value;
 	}
 
 	public final int getT3() {
 		return this.t3;
 	}
 
+	public final int getW() {
+		return this.w;
+	}
+
+	public final void setK(int value) {
+		k = value;
+	}
+
+	public final void setT0(int value) {
+		t0 = value;
+	}
+
+	public final void setT1(int value) {
+		t1 = value;
+	}
+
+	public final void setT2(int value) {
+		t2 = value;
+	}
+
 	public final void setT3(int value) {
 		t3 = value;
+	}
+
+	public final void setW(int value) {
+		w = value;
 	}
 }

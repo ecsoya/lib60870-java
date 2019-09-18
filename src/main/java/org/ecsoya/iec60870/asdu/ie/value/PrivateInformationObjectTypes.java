@@ -12,11 +12,11 @@ public class PrivateInformationObjectTypes {
 
 	private HashMap<TypeID, IPrivateIOFactory> privateTypes = new HashMap<TypeID, IPrivateIOFactory>();
 
-	public final void AddPrivateInformationObjectType(TypeID typeId, IPrivateIOFactory iot) {
+	public final void addPrivateInformationObjectType(TypeID typeId, IPrivateIOFactory iot) {
 		privateTypes.put(typeId, iot);
 	}
 
-	public final IPrivateIOFactory GetFactory(TypeID typeId) {
+	public final IPrivateIOFactory getFactory(TypeID typeId) {
 		IPrivateIOFactory factory = null;
 
 		factory = privateTypes.get(typeId);

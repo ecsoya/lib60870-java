@@ -36,15 +36,11 @@ public class QualityDescriptorP {
 		this.encodedValue = encodedValue;
 	}
 
-	public final boolean getReserved() {
-		return ((encodedValue & 0x04) == 0x04);
-	}
-
-	public final void setReserved(boolean value) {
-		if (value) {
-			encodedValue |= 0x04;
+	public final boolean getBlocked() {
+		if ((encodedValue & 0x10) != 0) {
+			return true;
 		} else {
-			encodedValue &= 0xfb;
+			return false;
 		}
 	}
 
@@ -52,16 +48,32 @@ public class QualityDescriptorP {
 		return ((encodedValue & 0x08) == 0x08);
 	}
 
-	public final void setElapsedTimeInvalid(boolean value) {
-		if (value) {
-			encodedValue |= 0x08;
+	public final byte getEncodedValue() {
+		return this.encodedValue;
+	}
+
+	public final boolean getInvalid() {
+		if ((encodedValue & 0x80) != 0) {
+			return true;
 		} else {
-			encodedValue &= 0xf7;
+			return false;
 		}
 	}
 
-	public final boolean getBlocked() {
-		if ((encodedValue & 0x10) != 0) {
+	public final boolean getNonTopical() {
+		if ((encodedValue & 0x40) != 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public final boolean getReserved() {
+		return ((encodedValue & 0x04) == 0x04);
+	}
+
+	public final boolean getSubstituted() {
+		if ((encodedValue & 0x20) != 0) {
 			return true;
 		} else {
 			return false;
@@ -76,27 +88,23 @@ public class QualityDescriptorP {
 		}
 	}
 
-	public final boolean getSubstituted() {
-		if ((encodedValue & 0x20) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final void setSubstituted(boolean value) {
+	public final void setElapsedTimeInvalid(boolean value) {
 		if (value) {
-			encodedValue |= 0x20;
+			encodedValue |= 0x08;
 		} else {
-			encodedValue &= 0xdf;
+			encodedValue &= 0xf7;
 		}
 	}
 
-	public final boolean getNonTopical() {
-		if ((encodedValue & 0x40) != 0) {
-			return true;
+	public final void setEncodedValue(byte value) {
+		encodedValue = value;
+	}
+
+	public final void setInvalid(boolean value) {
+		if (value) {
+			encodedValue |= 0x80;
 		} else {
-			return false;
+			encodedValue &= 0x7f;
 		}
 	}
 
@@ -108,31 +116,19 @@ public class QualityDescriptorP {
 		}
 	}
 
-	public final boolean getInvalid() {
-		if ((encodedValue & 0x80) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final void setInvalid(boolean value) {
+	public final void setReserved(boolean value) {
 		if (value) {
-			encodedValue |= 0x80;
+			encodedValue |= 0x04;
 		} else {
-			encodedValue &= 0x7f;
+			encodedValue &= 0xfb;
 		}
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte getEncodedValue()
-	public final byte getEncodedValue() {
-		return this.encodedValue;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public void setEncodedValue(byte value)
-	public final void setEncodedValue(byte value) {
-		encodedValue = value;
+	public final void setSubstituted(boolean value) {
+		if (value) {
+			encodedValue |= 0x20;
+		} else {
+			encodedValue &= 0xdf;
+		}
 	}
 }

@@ -36,39 +36,10 @@ import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
  */
 
 public class SinglePointInformation extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 1;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_SP_NA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private boolean value;
-
-	public final boolean getValue() {
-		return this.value;
-	}
-
-	public final void setValue(boolean value) {
-		this.value = value;
-	}
 
 	private QualityDescriptor quality;
 
-	public final QualityDescriptor getQuality() {
-		return this.quality;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal SinglePointInformation(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public SinglePointInformation(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSequence)
 			throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -76,19 +47,15 @@ public class SinglePointInformation extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
 		/* parse SIQ (single point information with qualitiy) */
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: byte siq = msg [startIndex++];
 		byte siq = msg[startIndex++];
 
 		value = ((siq & 0x01) == 0x01);
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: quality = new QualityDescriptor((byte)(siq & 0xf0));
 		quality = new QualityDescriptor((byte) (siq & 0xf0));
 	}
 
@@ -99,11 +66,9 @@ public class SinglePointInformation extends InformationObject {
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: byte val = quality.EncodedValue;
 		byte val = quality.getEncodedValue();
 
 		if (value) {
@@ -111,6 +76,33 @@ public class SinglePointInformation extends InformationObject {
 		}
 
 		frame.setNextByte(val);
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 1;
+	}
+
+	public final QualityDescriptor getQuality() {
+		return this.quality;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_SP_NA_1;
+	}
+
+	public final boolean getValue() {
+		return this.value;
+	}
+
+	public final void setValue(boolean value) {
+		this.value = value;
 	}
 
 }

@@ -7,25 +7,23 @@ import org.ecsoya.iec60870.asdu.TypeID;
 import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
 
 public class MeasuredValueNormalized extends MeasuredValueNormalizedWithoutQuality {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ME_NA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private QualityDescriptor quality;
 
-	public final QualityDescriptor getQuality() {
-		return this.quality;
+	public MeasuredValueNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
+			boolean isSequence) throws ASDUParsingException {
+		super(parameters, msg, startIndex, isSequence);
+		if (!isSequence) {
+			startIndex += parameters.getSizeOfIOA(); // skip IOA
+		}
+
+		if ((msg.length - startIndex) < getEncodedSize()) {
+			throw new ASDUParsingException("Message too small");
+		}
+
+		startIndex += 2; // normalized value
+
+		/* parse QDS (quality) */
+		quality = new QualityDescriptor(msg[startIndex++]);
 	}
 
 	public MeasuredValueNormalized(int objectAddress, float value, QualityDescriptor quality) {
@@ -38,29 +36,29 @@ public class MeasuredValueNormalized extends MeasuredValueNormalizedWithoutQuali
 		this.quality = quality;
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal MeasuredValueNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
-	public MeasuredValueNormalized(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
-			boolean isSequence) throws ASDUParsingException {
-		super(parameters, msg, startIndex, isSequence);
-		if (!isSequence) {
-			startIndex += parameters.getSizeOfIOA(); // skip IOA
-		}
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
-			throw new ASDUParsingException("Message too small");
-		}
-
-		startIndex += 2; // normalized value
-
-		/* parse QDS (quality) */
-		quality = new QualityDescriptor(msg[startIndex++]);
+		frame.setNextByte(quality.getEncodedValue());
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public int getEncodedSize() {
+		return 3;
+	}
 
-		frame.setNextByte(quality.getEncodedValue());
+	public final QualityDescriptor getQuality() {
+		return this.quality;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ME_NA_1;
 	}
 }

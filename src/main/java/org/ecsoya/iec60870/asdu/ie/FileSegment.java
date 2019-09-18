@@ -15,7 +15,16 @@ import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
  */
 public class FileSegment extends InformationObject {
 	private static int ENCODED_SIZE = 4;
+
+	public static int GetMaxDataSize(ApplicationLayerParameters parameters) {
+		int maxSize = parameters.getMaxAsduLength() - parameters.getSizeOfTypeId() - parameters.getSizeOfVSQ()
+				- parameters.getSizeOfCA() - parameters.getSizeOfCOT() - parameters.getSizeOfIOA() - ENCODED_SIZE;
+
+		return maxSize;
+	}
+
 	private NameOfFile nof;
+
 	private byte nameOfSection;
 
 	private byte los; /* length of Segment */
@@ -28,7 +37,7 @@ public class FileSegment extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -62,46 +71,8 @@ public class FileSegment extends InformationObject {
 		this.data = data;
 	}
 
-	@Override
-	public int GetEncodedSize() {
-		return ENCODED_SIZE;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.F_SG_NA_1;
-	}
-
-	public byte getNameOfSection() {
-		return nameOfSection;
-	}
-
-	public NameOfFile getNof() {
-		return nof;
-	}
-
-	public byte[] getData() {
-		return data;
-	}
-
-	public byte getLos() {
-		return los;
-	}
-
-	public static int GetMaxDataSize(ApplicationLayerParameters parameters) {
-		int maxSize = parameters.getMaxAsduLength() - parameters.getSizeOfTypeId() - parameters.getSizeOfVSQ()
-				- parameters.getSizeOfCA() - parameters.getSizeOfCOT() - parameters.getSizeOfIOA() - ENCODED_SIZE;
-
-		return maxSize;
-	}
-
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 		frame.setNextByte((byte) (nof.getValue() % 256));
 		frame.setNextByte((byte) (nof.getValue() / 256));
 
@@ -114,5 +85,36 @@ public class FileSegment extends InformationObject {
 		} else {
 			frame.appendBytes(data);
 		}
+	}
+
+	public byte[] getData() {
+		return data;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return ENCODED_SIZE;
+	}
+
+	public byte getLos() {
+		return los;
+	}
+
+	public byte getNameOfSection() {
+		return nameOfSection;
+	}
+
+	public NameOfFile getNof() {
+		return nof;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.F_SG_NA_1;
 	}
 }

@@ -8,6 +8,13 @@ package org.ecsoya.iec60870.serial;
  */
 public interface SerialPort {
 
+	void close();
+
+	/**
+	 * Discard data from the serial driver's receive buffer.
+	 */
+	void discardInBuffer();
+
 	SerialStream getBaseStream();
 
 	int getBaudRate();
@@ -15,11 +22,4 @@ public interface SerialPort {
 	boolean isOpen();
 
 	boolean open();
-
-	/**
-	 * Discard data from the serial driver's receive buffer.
-	 */
-	void discardInBuffer();
-
-	void close();
 }

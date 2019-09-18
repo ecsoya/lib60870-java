@@ -33,14 +33,59 @@ import org.ecsoya.iec60870.ASDUParsingException;
  */
 public class BinaryCounterReading {
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte[] encodedValue = new byte[5];
 	private byte[] encodedValue = new byte[5];
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte[] GetEncodedValue()
-	public final byte[] GetEncodedValue() {
+	public BinaryCounterReading() {
+	}
+
+	public BinaryCounterReading(byte[] msg, int startIndex) throws ASDUParsingException {
+		if (msg.length < startIndex + 5) {
+			throw new ASDUParsingException("Message too small for parsing BinaryCounterReading");
+		}
+
+		for (int i = 0; i < 5; i++) {
+			encodedValue[i] = msg[startIndex + i];
+		}
+	}
+
+	/**
+	 * Gets or sets the adjusted flag.
+	 * 
+	 * <value><c>true</c> if adjusted flag is set; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getAdjusted() {
+		return ((encodedValue[4] & 0x40) == 0x40);
+	}
+
+	/**
+	 * Gets or sets the carry flag
+	 * 
+	 * <value><c>true</c> if carry flag set; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getCarry() {
+		return ((encodedValue[4] & 0x20) == 0x20);
+	}
+
+	public final byte[] getEncodedValue() {
 		return encodedValue;
+	}
+
+	/**
+	 * Gets or sets the invalid flag
+	 * 
+	 * <value><c>true</c> if invalid flag is set; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getInvalid() {
+		return ((encodedValue[4] & 0x80) == 0x80);
+	}
+
+	/**
+	 * Gets or sets the sequence number.
+	 * 
+	 * <value>The sequence number.</value>
+	 */
+	public final int getSequenceNumber() {
+		return (encodedValue[4] & 0x1f);
 	}
 
 	/**
@@ -57,35 +102,12 @@ public class BinaryCounterReading {
 		return value;
 	}
 
-	public final void setValue(int value) {
-		byte[] valueBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(value).array();
-
-		System.arraycopy(valueBytes, 0, encodedValue, 0, 4);
-	}
-
-	/**
-	 * Gets or sets the sequence number.
-	 * 
-	 * <value>The sequence number.</value>
-	 */
-	public final int getSequenceNumber() {
-		return (encodedValue[4] & 0x1f);
-	}
-
-	public final void setSequenceNumber(int value) {
-		int seqNumber = value & 0x1f;
-		int flags = encodedValue[4] & 0xe0;
-
-		encodedValue[4] = (byte) (flags | seqNumber);
-	}
-
-	/**
-	 * Gets or sets the carry flag
-	 * 
-	 * <value><c>true</c> if carry flag set; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getCarry() {
-		return ((encodedValue[4] & 0x20) == 0x20);
+	public final void setAdjusted(boolean value) {
+		if (value) {
+			encodedValue[4] |= 0x40;
+		} else {
+			encodedValue[4] &= 0xbf;
+		}
 	}
 
 	public final void setCarry(boolean value) {
@@ -96,32 +118,6 @@ public class BinaryCounterReading {
 		}
 	}
 
-	/**
-	 * Gets or sets the adjusted flag.
-	 * 
-	 * <value><c>true</c> if adjusted flag is set; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getAdjusted() {
-		return ((encodedValue[4] & 0x40) == 0x40);
-	}
-
-	public final void setAdjusted(boolean value) {
-		if (value) {
-			encodedValue[4] |= 0x40;
-		} else {
-			encodedValue[4] &= 0xbf;
-		}
-	}
-
-	/**
-	 * Gets or sets the invalid flag
-	 * 
-	 * <value><c>true</c> if invalid flag is set; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getInvalid() {
-		return ((encodedValue[4] & 0x80) == 0x80);
-	}
-
 	public final void setInvalid(boolean value) {
 		if (value) {
 			encodedValue[4] |= 0x80;
@@ -130,16 +126,16 @@ public class BinaryCounterReading {
 		}
 	}
 
-	public BinaryCounterReading(byte[] msg, int startIndex) throws ASDUParsingException {
-		if (msg.length < startIndex + 5) {
-			throw new ASDUParsingException("Message too small for parsing BinaryCounterReading");
-		}
+	public final void setSequenceNumber(int value) {
+		int seqNumber = value & 0x1f;
+		int flags = encodedValue[4] & 0xe0;
 
-		for (int i = 0; i < 5; i++) {
-			encodedValue[i] = msg[startIndex + i];
-		}
+		encodedValue[4] = (byte) (flags | seqNumber);
 	}
 
-	public BinaryCounterReading() {
+	public final void setValue(int value) {
+		byte[] valueBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(value).array();
+
+		System.arraycopy(valueBytes, 0, encodedValue, 0, 4);
 	}
 }

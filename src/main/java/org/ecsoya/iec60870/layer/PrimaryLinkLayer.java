@@ -22,11 +22,11 @@ public abstract class PrimaryLinkLayer {
 		}
 	}
 
-	public abstract void HandleMessage(FunctionCodeSecondary fcs, boolean dir, boolean dfc, int address, byte[] msg,
+	public abstract void handleMessage(FunctionCodeSecondary fcs, boolean dir, boolean dfc, int address, byte[] msg,
 			int userDataStart, int userDataLength) throws IOException, Exception;
 
-	public abstract void RunStateMachine();
+	public abstract void runStateMachine() throws IOException;
 
-	public abstract void SendLinkLayerTestFunction();
+	public abstract void sendLinkLayerTestFunction();
 
 }

@@ -28,7 +28,7 @@ public class Bitstring32Command extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		value = msg[startIndex++];
@@ -48,10 +48,26 @@ public class Bitstring32Command extends InformationObject {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
+	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 */
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (value % 256));
+		frame.setNextByte((byte) ((value / 0x100) % 256));
+		frame.setNextByte((byte) ((value / 0x10000) % 256));
+		frame.setNextByte((byte) ((value / 0x1000000) % 256));
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see org.ecsoya.iec60870.asdu.InformationObject#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 4;
 	}
 
@@ -73,22 +89,6 @@ public class Bitstring32Command extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.C_BO_NA_1;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.InformationObject#Encode(org.ecsoya.iec60870.Frame,
-	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
-	 */
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (value % 256));
-		frame.setNextByte((byte) ((value / 0x100) % 256));
-		frame.setNextByte((byte) ((value / 0x10000) % 256));
-		frame.setNextByte((byte) ((value / 0x1000000) % 256));
 	}
 
 }

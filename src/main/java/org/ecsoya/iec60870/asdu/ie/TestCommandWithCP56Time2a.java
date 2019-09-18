@@ -23,7 +23,7 @@ public class TestCommandWithCP56Time2a extends TestCommand {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		tsc = msg[startIndex++];
@@ -39,26 +39,26 @@ public class TestCommandWithCP56Time2a extends TestCommand {
 	}
 
 	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (tsc % 256));
+		frame.setNextByte((byte) (tsc / 256));
+
+		frame.appendBytes(time.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 9;
+	}
+
+	@Override
 	public boolean getSupportsSequence() {
 		return false;
 	}
 
 	@Override
-	public int GetEncodedSize() {
-		return 9;
-	}
-
-	@Override
 	public TypeID getType() {
 		return TypeID.C_TS_TA_1;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (tsc % 256));
-		frame.setNextByte((byte) (tsc / 256));
-
-		frame.appendBytes(time.getEncodedValue());
 	}
 }

@@ -27,18 +27,26 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 	OutputStream socketStream = null;
 	Thread acceptThread;
 
-	private void DebugLog(String msg) {
+	public TcpServerVirtualSerialPort() {
+	}
+
+	@Override
+	public void close() throws IOException {
+		if (socketStream != null) {
+			socketStream.close();
+		}
+	}
+
+	private void debugLog(String msg) {
 		if (debugOutput) {
 			System.out.print("CS101 TCP link layer: ");
 			System.out.println(msg);
 		}
 	}
 
-	/**
-	 * @param debugOutput the debugOutput to set
-	 */
-	public void setDebugOutput(boolean debugOutput) {
-		this.debugOutput = debugOutput;
+	public void flush() throws IOException {
+		if (socketStream != null)
+			socketStream.flush();
 	}
 
 	/**
@@ -46,102 +54,6 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 	 */
 	public boolean isDebugOutput() {
 		return debugOutput;
-	}
-
-	public TcpServerVirtualSerialPort() {
-	}
-
-	public void SetLocalAddress(String localAddress) {
-		localHostname = localAddress;
-	}
-
-	public void SetTcpPort(int tcpPort) {
-		localPort = tcpPort;
-	}
-
-	private Runnable ServerAcceptThread() {
-		return new Runnable() {
-
-			@Override
-			public void run() {
-
-				running = true;
-
-				DebugLog("Waiting for connections...");
-
-				while (running) {
-
-					try {
-
-						Socket newSocket = listeningSocket.accept();
-
-						if (newSocket != null) {
-							DebugLog("New connection");
-
-							SocketAddress ipEndPoint = newSocket.getRemoteSocketAddress();
-
-							DebugLog("  from IP: " + ipEndPoint.toString());
-
-							boolean acceptConnection = true;
-
-							if (acceptConnection) {
-
-								conSocket = newSocket;
-								socketStream = conSocket.getOutputStream();
-								connected = true;
-
-								while (connected) {
-
-									if (!conSocket.isConnected())
-										break;
-
-									Thread.sleep(10);
-								}
-
-								connected = false;
-								socketStream = null;
-								conSocket = null;
-
-								DebugLog("Connection from " + ipEndPoint.toString() + "closed");
-							} else
-								newSocket.close();
-						}
-
-					} catch (Exception e) {
-						running = false;
-					}
-
-				}
-			}
-		};
-	}
-
-	public void Start() throws IOException {
-		if (running == false) {
-			// Create a TCP/IP socket.
-			listeningSocket = ServerSocketFactory.getDefault().createServerSocket();
-
-			listeningSocket.bind(new InetSocketAddress(localHostname, localPort));
-
-//			listeningSocket.Listen(100);
-
-			acceptThread = new Thread(ServerAcceptThread());
-
-			acceptThread.start();
-		}
-	}
-
-	public void Stop() throws IOException {
-		if (running == true) {
-			running = false;
-			listeningSocket.close();
-
-			try {
-				acceptThread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 
 	/*************************
@@ -178,13 +90,107 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 		}
 	}
 
+	private Runnable serverAcceptThread() {
+		return new Runnable() {
+
+			@Override
+			public void run() {
+
+				running = true;
+
+				debugLog("Waiting for connections...");
+
+				while (running) {
+
+					try {
+
+						Socket newSocket = listeningSocket.accept();
+
+						if (newSocket != null) {
+							debugLog("New connection");
+
+							SocketAddress ipEndPoint = newSocket.getRemoteSocketAddress();
+
+							debugLog("  from IP: " + ipEndPoint.toString());
+
+							boolean acceptConnection = true;
+
+							if (acceptConnection) {
+
+								conSocket = newSocket;
+								socketStream = conSocket.getOutputStream();
+								connected = true;
+
+								while (connected) {
+
+									if (!conSocket.isConnected())
+										break;
+
+									Thread.sleep(10);
+								}
+
+								connected = false;
+								socketStream = null;
+								conSocket = null;
+
+								debugLog("Connection from " + ipEndPoint.toString() + "closed");
+							} else
+								newSocket.close();
+						}
+
+					} catch (Exception e) {
+						running = false;
+					}
+
+				}
+			}
+		};
+	}
+
+	/**
+	 * @param debugOutput the debugOutput to set
+	 */
+	public void setDebugOutput(boolean debugOutput) {
+		this.debugOutput = debugOutput;
+	}
+
+	public void setLocalAddress(String localAddress) {
+		localHostname = localAddress;
+	}
+
 	@Override
-	public void write(int value) throws IOException {
-		if (socketStream != null) {
+	public void setReadTimeout(int timeout) {
+		this.readTimeout = timeout;
+	}
+
+	public void setTcpPort(int tcpPort) {
+		localPort = tcpPort;
+	}
+
+	public void start() throws IOException {
+		if (running == false) {
+			// Create a TCP/IP socket.
+			listeningSocket = ServerSocketFactory.getDefault().createServerSocket();
+
+			listeningSocket.bind(new InetSocketAddress(localHostname, localPort));
+
+//			listeningSocket.Listen(100);
+
+			acceptThread = new Thread(serverAcceptThread());
+
+			acceptThread.start();
+		}
+	}
+
+	public void stop() throws IOException {
+		if (running == true) {
+			running = false;
+			listeningSocket.close();
+
 			try {
-				socketStream.write(value);
-			} catch (IOException e) {
-				connected = false;
+				acceptThread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -200,19 +206,13 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 	}
 
 	@Override
-	public void setReadTimeout(int timeout) {
-		this.readTimeout = timeout;
-	}
-
-	public void flush() throws IOException {
-		if (socketStream != null)
-			socketStream.flush();
-	}
-
-	@Override
-	public void close() throws IOException {
+	public void write(int value) throws IOException {
 		if (socketStream != null) {
-			socketStream.close();
+			try {
+				socketStream.write(value);
+			} catch (IOException e) {
+				connected = false;
+			}
 		}
 	}
 }

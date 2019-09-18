@@ -40,8 +40,11 @@ public enum NameOfFile {
 	SEQUENCES_OF_EVENTS(3),
 	SEQUENCES_OF_ANALOGUE_VALUES(4);
 
-	private int shortValue;
 	private static java.util.HashMap<Integer, NameOfFile> mappings;
+
+	public static NameOfFile forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, NameOfFile> getMappings() {
 		if (mappings == null) {
@@ -54,6 +57,8 @@ public enum NameOfFile {
 		return mappings;
 	}
 
+	private int shortValue;
+
 	private NameOfFile(int value) {
 		shortValue = value;
 		getMappings().put(value, this);
@@ -61,9 +66,5 @@ public enum NameOfFile {
 
 	public int getValue() {
 		return shortValue;
-	}
-
-	public static NameOfFile forValue(int value) {
-		return getMappings().get(value);
 	}
 }

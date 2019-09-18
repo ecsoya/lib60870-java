@@ -21,7 +21,7 @@ public class ResetProcessCommand extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		qrp = msg[startIndex++];
@@ -33,8 +33,18 @@ public class ResetProcessCommand extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte(qrp);
+	}
+
+	@Override
+	public int getEncodedSize() {
 		return 1;
+	}
+
+	public byte getQrp() {
+		return qrp;
 	}
 
 	@Override
@@ -45,16 +55,6 @@ public class ResetProcessCommand extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.C_RP_NA_1;
-	}
-
-	public byte getQrp() {
-		return qrp;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte(qrp);
 	}
 
 }

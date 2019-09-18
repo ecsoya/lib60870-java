@@ -27,7 +27,7 @@ public class DoubleCommandWithCP56Time2a extends DoubleCommand {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 1; /* DCQ */
@@ -50,11 +50,14 @@ public class DoubleCommandWithCP56Time2a extends DoubleCommand {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.DoubleCommand#getType()
+	 * @see
+	 * org.ecsoya.iec60870.asdu.ie.DoubleCommand#Encode(org.ecsoya.iec60870.Frame,
+	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
 	 */
 	@Override
-	public TypeID getType() {
-		return TypeID.C_DC_TA_1;
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.appendBytes(timestamp.getEncodedValue());
 	}
 
 	/*
@@ -70,13 +73,10 @@ public class DoubleCommandWithCP56Time2a extends DoubleCommand {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.ie.DoubleCommand#Encode(org.ecsoya.iec60870.Frame,
-	 * org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 * @see org.ecsoya.iec60870.asdu.ie.DoubleCommand#getType()
 	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.appendBytes(timestamp.getEncodedValue());
+	public TypeID getType() {
+		return TypeID.C_DC_TA_1;
 	}
 }

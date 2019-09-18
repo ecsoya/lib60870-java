@@ -36,22 +36,15 @@ import org.ecsoya.iec60870.conn.IFileReceiver;
  */
 public class CS104Client1 {
 
-	private static void ConnectionHandler(Object parameter, ConnectionEvent connectionEvent) {
-		switch (connectionEvent) {
-		case OPENED:
-			System.out.println("Connected");
-			break;
-		case CLOSED:
-			System.out.println("Connection closed");
-			break;
-		case STARTDT_CON_RECEIVED:
-			System.out.println("STARTDT CON received");
-			break;
-		case STOPDT_CON_RECEIVED:
-			System.out.println("STOPDT CON received");
-			break;
-		default:
-			break;
+	public static class Receiver implements IFileReceiver {
+
+		public void finished(FileErrorCode result) {
+			System.out.println("File download finished - code: " + result);
+		}
+
+		public void segmentReceived(byte sectionName, int offset, int size, byte[] data) {
+			System.out.println(
+					String.format("File segment - sectionName: {0} offset: {1} size: {2}", sectionName, offset, size));
 		}
 	}
 
@@ -159,15 +152,22 @@ public class CS104Client1 {
 		}
 	}
 
-	public static class Receiver implements IFileReceiver {
-
-		public void Finished(FileErrorCode result) {
-			System.out.println("File download finished - code: " + result);
-		}
-
-		public void SegmentReceived(byte sectionName, int offset, int size, byte[] data) {
-			System.out.println(
-					String.format("File segment - sectionName: {0} offset: {1} size: {2}", sectionName, offset, size));
+	private static void ConnectionHandler(Object parameter, ConnectionEvent connectionEvent) {
+		switch (connectionEvent) {
+		case OPENED:
+			System.out.println("Connected");
+			break;
+		case CLOSED:
+			System.out.println("Connection closed");
+			break;
+		case STARTDT_CON_RECEIVED:
+			System.out.println("STARTDT CON received");
+			break;
+		case STOPDT_CON_RECEIVED:
+			System.out.println("STOPDT CON received");
+			break;
+		default:
+			break;
 		}
 	}
 

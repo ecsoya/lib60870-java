@@ -5,6 +5,11 @@ import java.time.LocalDateTime;
 public class CP56Time2a {
 	private byte[] encodedValue = new byte[7];
 
+	public CP56Time2a() {
+		for (int i = 0; i < 7; i++)
+			encodedValue[i] = 0;
+	}
+
 	public CP56Time2a(byte[] msg, int startIndex) throws ASDUParsingException {
 		if (msg.length < startIndex + 7)
 			throw new ASDUParsingException("Message too small for parsing CP56Time2a");
@@ -23,9 +28,8 @@ public class CP56Time2a {
 		setMinute(time.getMinute());
 	}
 
-	public CP56Time2a() {
-		for (int i = 0; i < 7; i++)
-			encodedValue[i] = 0;
+	public LocalDateTime getDateTime() {
+		return LocalDateTime.of(1970, 1, 1, 0, 0, 0);
 	}
 
 	/// <summary>
@@ -45,8 +49,32 @@ public class CP56Time2a {
 		return value;
 	}
 
-	public LocalDateTime getDateTime() {
-		return LocalDateTime.of(1970, 1, 1, 0, 0, 0);
+	/// <summary>
+	/// Gets or sets the day of month in range 1 to 31.
+	/// </summary>
+	/// <value>The day of month.</value>
+	public int getDayOfMonth() {
+		return (encodedValue[4] & 0x1f);
+	}
+
+	/// <summary>
+	/// Gets or sets the day of week in range from 1 (Monday) until 7 (Sunday)
+	/// </summary>
+	/// <value>The day of week.</value>
+	public int getDayOfWeek() {
+		return ((encodedValue[4] & 0xe0) >> 5);
+	}
+
+	public byte[] getEncodedValue() {
+		return encodedValue;
+	}
+
+	/// <summary>
+	/// Gets or sets the hour (range 0 to 23)
+	/// </summary>
+	/// <value>The hour.</value>
+	public int getHour() {
+		return (encodedValue[3] & 0x1f);
 	}
 
 	/// <summary>
@@ -57,11 +85,20 @@ public class CP56Time2a {
 		return (encodedValue[0] + (encodedValue[1] * 0x100)) % 1000;
 	}
 
-	public void setMillisecond(int value) {
-		int millies = (getSecond() * 1000) + value;
+	/// <summary>
+	/// Gets or sets the minute (range 0 to 59)
+	/// </summary>
+	/// <value>The minute.</value>
+	public int getMinute() {
+		return (encodedValue[2] & 0x3f);
+	}
 
-		encodedValue[0] = (byte) (millies & 0xff);
-		encodedValue[1] = (byte) ((millies / 0x100) & 0xff);
+	/// <summary>
+	/// Gets the month in range from 1 (January) to 12 (December)
+	/// </summary>
+	/// <value>The month.</value>
+	public int getMonth() {
+		return (encodedValue[5] & 0x0f);
 	}
 
 	/// <summary>
@@ -70,6 +107,70 @@ public class CP56Time2a {
 	/// <value>The second.</value>
 	public int getSecond() {
 		return (encodedValue[0] + (encodedValue[1] * 0x100)) / 1000;
+	}
+
+	/// <summary>
+	/// Gets the year in the range 0 to 99
+	/// </summary>
+	/// <value>The year.</value>
+	public int getYear() {
+		return (encodedValue[6] & 0x7f);
+	}
+
+	/// <summary>
+	/// Gets a value indicating whether this <see cref="lib60870.CP56Time2a"/> is
+	/// invalid.
+	/// </summary>
+	/// <value><c>true</c> if invalid; otherwise, <c>false</c>.</value>
+	public boolean isInvalid() {
+		return ((encodedValue[2] & 0x80) != 0);
+	}
+
+	/// <summary>
+	/// Gets a value indicating whether this <see cref="lib60870.CP26Time2a"/> was
+	/// substitued by an intermediate station
+	/// </summary>
+	/// <value><c>true</c> if substitued; otherwise, <c>false</c>.</value>
+	public boolean isSubstituted() {
+		return ((encodedValue[2] & 0x40) == 0x40);
+	}
+
+	public boolean isSummerTime() {
+		return ((encodedValue[3] & 0x80) != 0);
+	}
+
+	public void setDayOfMonth(int value) {
+		encodedValue[4] = (byte) ((encodedValue[4] & 0xe0) + (value & 0x1f));
+	}
+
+	public void setDayOfWeek(int value) {
+		encodedValue[4] = (byte) ((encodedValue[4] & 0x1f) | ((value & 0x07) << 5));
+	}
+
+	public void setHour(int value) {
+		encodedValue[3] = (byte) ((encodedValue[3] & 0xe0) | (value & 0x1f));
+	}
+
+	public void setInvalid(boolean value) {
+		if (value)
+			encodedValue[2] |= 0x80;
+		else
+			encodedValue[2] &= 0x7f;
+	}
+
+	public void setMillisecond(int value) {
+		int millies = (getSecond() * 1000) + value;
+
+		encodedValue[0] = (byte) (millies & 0xff);
+		encodedValue[1] = (byte) ((millies / 0x100) & 0xff);
+	}
+
+	public void setMinute(int value) {
+		encodedValue[2] = (byte) ((encodedValue[2] & 0xc0) | (value & 0x3f));
+	}
+
+	public void setMonth(int value) {
+		encodedValue[5] = (byte) ((encodedValue[5] & 0xf0) + (value & 0x0f));
 	}
 
 	public void setSecond(int value) {
@@ -83,83 +184,11 @@ public class CP56Time2a {
 		encodedValue[1] = (byte) ((millies / 0x100) & 0xff);
 	}
 
-	/// <summary>
-	/// Gets or sets the minute (range 0 to 59)
-	/// </summary>
-	/// <value>The minute.</value>
-	public int getMinute() {
-		return (encodedValue[2] & 0x3f);
-	}
-
-	public void setMinute(int value) {
-		encodedValue[2] = (byte) ((encodedValue[2] & 0xc0) | (value & 0x3f));
-	}
-
-	/// <summary>
-	/// Gets or sets the hour (range 0 to 23)
-	/// </summary>
-	/// <value>The hour.</value>
-	public int getHour() {
-		return (encodedValue[3] & 0x1f);
-	}
-
-	public void setHour(int value) {
-		encodedValue[3] = (byte) ((encodedValue[3] & 0xe0) | (value & 0x1f));
-	}
-
-	/// <summary>
-	/// Gets or sets the day of week in range from 1 (Monday) until 7 (Sunday)
-	/// </summary>
-	/// <value>The day of week.</value>
-	public int getDayOfWeek() {
-		return ((encodedValue[4] & 0xe0) >> 5);
-	}
-
-	public void setDayOfWeek(int value) {
-		encodedValue[4] = (byte) ((encodedValue[4] & 0x1f) | ((value & 0x07) << 5));
-	}
-
-	/// <summary>
-	/// Gets or sets the day of month in range 1 to 31.
-	/// </summary>
-	/// <value>The day of month.</value>
-	public int getDayOfMonth() {
-		return (encodedValue[4] & 0x1f);
-	}
-
-	public void setDayOfMonth(int value) {
-		encodedValue[4] = (byte) ((encodedValue[4] & 0xe0) + (value & 0x1f));
-	}
-
-	/// <summary>
-	/// Gets the month in range from 1 (January) to 12 (December)
-	/// </summary>
-	/// <value>The month.</value>
-	public int getMonth() {
-		return (encodedValue[5] & 0x0f);
-	}
-
-	public void setMonth(int value) {
-		encodedValue[5] = (byte) ((encodedValue[5] & 0xf0) + (value & 0x0f));
-	}
-
-	/// <summary>
-	/// Gets the year in the range 0 to 99
-	/// </summary>
-	/// <value>The year.</value>
-	public int getYear() {
-		return (encodedValue[6] & 0x7f);
-	}
-
-	public void setYear(int value) {
-		/* limit value to range 0 - 99 */
-		value = value % 100;
-
-		encodedValue[6] = (byte) ((encodedValue[6] & 0x80) + (value & 0x7f));
-	}
-
-	public boolean isSummerTime() {
-		return ((encodedValue[3] & 0x80) != 0);
+	public void setSubstituted(boolean value) {
+		if (value)
+			encodedValue[2] |= 0x40;
+		else
+			encodedValue[2] &= 0xbf;
 	}
 
 	public void setSummerTime(boolean value) {
@@ -169,40 +198,11 @@ public class CP56Time2a {
 			encodedValue[3] &= 0x7f;
 	}
 
-	/// <summary>
-	/// Gets a value indicating whether this <see cref="lib60870.CP56Time2a"/> is
-	/// invalid.
-	/// </summary>
-	/// <value><c>true</c> if invalid; otherwise, <c>false</c>.</value>
-	public boolean isInvalid() {
-		return ((encodedValue[2] & 0x80) != 0);
-	}
+	public void setYear(int value) {
+		/* limit value to range 0 - 99 */
+		value = value % 100;
 
-	public void setInvalid(boolean value) {
-		if (value)
-			encodedValue[2] |= 0x80;
-		else
-			encodedValue[2] &= 0x7f;
-	}
-
-	/// <summary>
-	/// Gets a value indicating whether this <see cref="lib60870.CP26Time2a"/> was
-	/// substitued by an intermediate station
-	/// </summary>
-	/// <value><c>true</c> if substitued; otherwise, <c>false</c>.</value>
-	public boolean isSubstituted() {
-		return ((encodedValue[2] & 0x40) == 0x40);
-	}
-
-	public void setSubstituted(boolean value) {
-		if (value)
-			encodedValue[2] |= 0x40;
-		else
-			encodedValue[2] &= 0xbf;
-	}
-
-	public byte[] getEncodedValue() {
-		return encodedValue;
+		encodedValue[6] = (byte) ((encodedValue[6] & 0x80) + (value & 0x7f));
 	}
 
 	public String

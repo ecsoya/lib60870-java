@@ -12,17 +12,17 @@ import java.io.IOException;
  */
 public interface SerialStream extends Closeable, Flushable {
 
+	int read(byte[] buffer, int offset, int length) throws IOException;
+
 	// READ
 	byte readByte() throws IOException;
-
-	int read(byte[] buffer, int offset, int length) throws IOException;
 
 	void setReadTimeout(int timeout);
 
 	// WRITE
 
-	void write(int value) throws IOException;
-
 	void write(byte buffer[], int offset, int length) throws IOException;
+
+	void write(int value) throws IOException;
 
 }

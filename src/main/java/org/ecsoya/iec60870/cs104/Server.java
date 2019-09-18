@@ -35,40 +35,21 @@ public class Server extends Slave {
 
 	private ServerMode serverMode;
 
-	private void DebugLog(String msg) {
-		if (debugOutput) {
-			System.out.print("CS104 SLAVE: ");
-			System.out.println(msg);
-		}
-	}
-
-	public void setServerMode(ServerMode serverMode) {
-		this.serverMode = serverMode;
-	}
-
-	public ServerMode getServerMode() {
-		return serverMode;
-	}
-
-	public void setMaxQueueSize(int maxQueueSize) {
-		this.maxQueueSize = maxQueueSize;
-	}
-
-	public int getMaxQueueSize() {
-		return maxQueueSize;
-	}
-
 	private APCIParameters apciParameters;
-	private ApplicationLayerParameters alParameters;
 
-	public ApplicationLayerParameters GetApplicationLayerParameters() {
-		return alParameters;
-	}
+	private ApplicationLayerParameters alParameters;
 
 	private TlsSecurityInformation securityInfo = null;
 
 	// List of all open connections
 	private List<ClientConnection> allOpenConnections = new ArrayList<ClientConnection>();
+
+	public ConnectionRequestHandler connectionRequestHandler = null;
+
+	public Object connectionRequestHandlerParameter = null;
+	private ConnectionEventHandler connectionEventHandler = null;
+
+	private Object connectionEventHandlerParameter = null;
 
 	/// <summary>
 	/// Create a new server using default connection parameters
@@ -76,16 +57,6 @@ public class Server extends Slave {
 	public Server() {
 		this.apciParameters = new APCIParameters();
 		this.alParameters = new ApplicationLayerParameters();
-	}
-
-	public Server(TlsSecurityInformation securityInfo) {
-		this.apciParameters = new APCIParameters();
-		this.alParameters = new ApplicationLayerParameters();
-
-		this.securityInfo = securityInfo;
-
-		if (securityInfo != null)
-			this.localPort = 19998;
 	}
 
 	/// <summary>
@@ -107,35 +78,82 @@ public class Server extends Slave {
 			this.localPort = 19998;
 	}
 
-	public ConnectionRequestHandler connectionRequestHandler = null;
-	public Object connectionRequestHandlerParameter = null;
+	public Server(TlsSecurityInformation securityInfo) {
+		this.apciParameters = new APCIParameters();
+		this.alParameters = new ApplicationLayerParameters();
 
-	/// <summary>
-	/// Sets a callback handler for connection request. The user can allow
-	/// (returning true) or deny (returning false)
-	/// the connection attempt. If no handler is installed every new connection will
-	/// be accepted.
-	/// </summary>
-	/// <param name="handler">Handler.</param>
-	/// <param name="parameter">Parameter.</param>
-	public void SetConnectionRequestHandler(ConnectionRequestHandler handler, Object parameter) {
-		this.connectionRequestHandler = handler;
-		this.connectionRequestHandlerParameter = parameter;
+		this.securityInfo = securityInfo;
+
+		if (securityInfo != null)
+			this.localPort = 19998;
 	}
 
-	private ConnectionEventHandler connectionEventHandler = null;
-	private Object connectionEventHandlerParameter = null;
+	void Activated(ClientConnection activeConnection) {
+		if (connectionEventHandler != null)
+			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
+					ClientConnectionEvent.ACTIVE);
+
+		// deactivate all other connections
+
+		for (ClientConnection connection : allOpenConnections) {
+			if (connection != activeConnection) {
+
+				if (connection.isActive()) {
+
+					if (connectionEventHandler != null)
+						connectionEventHandler.invoke(connectionEventHandlerParameter, connection,
+								ClientConnectionEvent.INACTIVE);
+
+					connection.setActive(false);
+				}
+			}
+		}
+	}
+
+	void Deactivated(ClientConnection activeConnection) {
+		if (connectionEventHandler != null)
+			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
+					ClientConnectionEvent.INACTIVE);
+	}
+
+	private void DebugLog(String msg) {
+		if (debugOutput) {
+			System.out.print("CS104 SLAVE: ");
+			System.out.println(msg);
+		}
+	}
 
 	/// <summary>
-	/// Sets the connection event handler. The connection event handler will be
-	/// called whenever a new
-	/// connection was opened, closed, activated, or inactivated.
+	/// Enqueues the ASDU to the transmission queue.
 	/// </summary>
-	/// <param name="handler">Handler.</param>
-	/// <param name="parameter">Parameter.</param>
-	public void SetConnectionEventHandler(ConnectionEventHandler handler, Object parameter) {
-		this.connectionEventHandler = handler;
-		this.connectionEventHandlerParameter = parameter;
+	/// If an active connection exists the ASDU will be sent to the active client
+	/// immediately. Otherwhise
+	/// the ASDU will be added to the transmission queue for later transmission.
+	/// <param name="asdu">ASDU to be sent</param>
+	public void EnqueueASDU(ASDU asdu) {
+		if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
+			asduQueue.enqueueAsdu(asdu);
+
+			for (ClientConnection connection : allOpenConnections) {
+				if (connection.isActive())
+					connection.ASDUReadyToSend();
+			}
+		} else {
+			for (ClientConnection connection : allOpenConnections) {
+				if (connection.isActive()) {
+					connection.GetASDUQueue().enqueueAsdu(asdu);
+					connection.ASDUReadyToSend();
+				}
+			}
+		}
+	}
+
+	public ApplicationLayerParameters GetApplicationLayerParameters() {
+		return alParameters;
+	}
+
+	public int getMaxQueueSize() {
+		return maxQueueSize;
 	}
 
 	/// <summary>
@@ -144,6 +162,22 @@ public class Server extends Slave {
 	/// <value>The number of open connections.</value>
 	public int getOpenConnectionsCount() {
 		return this.allOpenConnections.size();
+	}
+
+	public ServerMode getServerMode() {
+		return serverMode;
+	}
+
+	void MarkASDUAsConfirmed(int index, long timestamp) {
+		if (asduQueue != null)
+			asduQueue.markASDUAsConfirmed(index, timestamp);
+	}
+
+	public void Remove(ClientConnection connection) {
+		if (connectionEventHandler != null)
+			connectionEventHandler.invoke(connectionEventHandlerParameter, connection, ClientConnectionEvent.CLOSED);
+
+		allOpenConnections.remove(connection);
 	}
 
 	private void ServerAcceptThread() {
@@ -202,11 +236,29 @@ public class Server extends Slave {
 		}
 	}
 
-	public void Remove(ClientConnection connection) {
-		if (connectionEventHandler != null)
-			connectionEventHandler.invoke(connectionEventHandlerParameter, connection, ClientConnectionEvent.CLOSED);
+	/// <summary>
+	/// Sets the connection event handler. The connection event handler will be
+	/// called whenever a new
+	/// connection was opened, closed, activated, or inactivated.
+	/// </summary>
+	/// <param name="handler">Handler.</param>
+	/// <param name="parameter">Parameter.</param>
+	public void SetConnectionEventHandler(ConnectionEventHandler handler, Object parameter) {
+		this.connectionEventHandler = handler;
+		this.connectionEventHandlerParameter = parameter;
+	}
 
-		allOpenConnections.remove(connection);
+	/// <summary>
+	/// Sets a callback handler for connection request. The user can allow
+	/// (returning true) or deny (returning false)
+	/// the connection attempt. If no handler is installed every new connection will
+	/// be accepted.
+	/// </summary>
+	/// <param name="handler">Handler.</param>
+	/// <param name="parameter">Parameter.</param>
+	public void SetConnectionRequestHandler(ConnectionRequestHandler handler, Object parameter) {
+		this.connectionRequestHandler = handler;
+		this.connectionRequestHandlerParameter = parameter;
 	}
 
 	/// <summary>
@@ -224,6 +276,14 @@ public class Server extends Slave {
 	/// <param name="tcpPort">Local TCP port to bind.</param>
 	public void SetLocalPort(int tcpPort) {
 		this.localPort = tcpPort;
+	}
+
+	public void setMaxQueueSize(int maxQueueSize) {
+		this.maxQueueSize = maxQueueSize;
+	}
+
+	public void setServerMode(ServerMode serverMode) {
+		this.serverMode = serverMode;
 	}
 
 	/// <summary>
@@ -282,66 +342,8 @@ public class Server extends Slave {
 		}
 	}
 
-	/// <summary>
-	/// Enqueues the ASDU to the transmission queue.
-	/// </summary>
-	/// If an active connection exists the ASDU will be sent to the active client
-	/// immediately. Otherwhise
-	/// the ASDU will be added to the transmission queue for later transmission.
-	/// <param name="asdu">ASDU to be sent</param>
-	public void EnqueueASDU(ASDU asdu) {
-		if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
-			asduQueue.EnqueueAsdu(asdu);
-
-			for (ClientConnection connection : allOpenConnections) {
-				if (connection.isActive())
-					connection.ASDUReadyToSend();
-			}
-		} else {
-			for (ClientConnection connection : allOpenConnections) {
-				if (connection.isActive()) {
-					connection.GetASDUQueue().EnqueueAsdu(asdu);
-					connection.ASDUReadyToSend();
-				}
-			}
-		}
-	}
-
 	void UnmarkAllASDUs() {
 		if (asduQueue != null)
-			asduQueue.UnmarkAllASDUs();
-	}
-
-	void MarkASDUAsConfirmed(int index, long timestamp) {
-		if (asduQueue != null)
-			asduQueue.MarkASDUAsConfirmed(index, timestamp);
-	}
-
-	void Activated(ClientConnection activeConnection) {
-		if (connectionEventHandler != null)
-			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
-					ClientConnectionEvent.ACTIVE);
-
-		// deactivate all other connections
-
-		for (ClientConnection connection : allOpenConnections) {
-			if (connection != activeConnection) {
-
-				if (connection.isActive()) {
-
-					if (connectionEventHandler != null)
-						connectionEventHandler.invoke(connectionEventHandlerParameter, connection,
-								ClientConnectionEvent.INACTIVE);
-
-					connection.setActive(false);
-				}
-			}
-		}
-	}
-
-	void Deactivated(ClientConnection activeConnection) {
-		if (connectionEventHandler != null)
-			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
-					ClientConnectionEvent.INACTIVE);
+			asduQueue.unmarkAllASDUs();
 	}
 }

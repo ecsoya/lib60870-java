@@ -22,24 +22,22 @@ package org.ecsoya.iec60870.asdu.ie;
  */
 
 public class SetpointCommandQualifier {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte encodedValue;
 	private byte encodedValue;
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public SetpointCommandQualifier(byte encodedValue)
-	public SetpointCommandQualifier(byte encodedValue) {
-		this.encodedValue = encodedValue;
-	}
-
 	public SetpointCommandQualifier(boolean select, int ql) {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: encodedValue = (byte)(ql & 0x7f);
 		encodedValue = (byte) (ql & 0x7f);
 
 		if (select) {
 			encodedValue |= 0x80;
 		}
+	}
+
+	public SetpointCommandQualifier(byte encodedValue) {
+		this.encodedValue = encodedValue;
+	}
+
+	public final byte GetEncodedValue() {
+		return encodedValue;
 	}
 
 	public final int getQL() {
@@ -48,11 +46,5 @@ public class SetpointCommandQualifier {
 
 	public final boolean getSelect() {
 		return ((encodedValue & 0x80) == 0x80);
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte GetEncodedValue()
-	public final byte GetEncodedValue() {
-		return encodedValue;
 	}
 }

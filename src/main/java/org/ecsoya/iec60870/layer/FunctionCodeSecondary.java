@@ -12,6 +12,11 @@ public enum FunctionCodeSecondary {
 	LINK_SERVICE_NOT_FUNCTIONING(14),
 	LINK_SERVICE_NOT_IMPLEMENTED(15);
 
+	public static FunctionCodeSecondary get(int value) {
+		return Arrays.asList(FunctionCodeSecondary.values()).stream().filter(v -> value == v.value).findFirst()
+				.orElse(null);
+	}
+
 	private final int value;
 
 	private FunctionCodeSecondary(int value) {
@@ -20,10 +25,5 @@ public enum FunctionCodeSecondary {
 
 	public int getValue() {
 		return value;
-	}
-
-	public static FunctionCodeSecondary get(int value) {
-		return Arrays.asList(FunctionCodeSecondary.values()).stream().filter(v -> value == v.value).findFirst()
-				.orElse(null);
 	}
 }

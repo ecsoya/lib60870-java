@@ -36,14 +36,65 @@ import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
  */
 
 public class ParameterNormalizedValue extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
+	private ScaledValue scaledValue;
+
+	private byte qpm;
+
+	public ParameterNormalizedValue(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
+			throws ASDUParsingException {
+		super(parameters, msg, startIndex, false);
+		startIndex += parameters.getSizeOfIOA(); // skip IOA
+
+		if ((msg.length - startIndex) < getEncodedSize()) {
+			throw new ASDUParsingException("Message too small");
+		}
+
+		scaledValue = new ScaledValue(msg, startIndex);
+		startIndex += 2;
+
+		/* parse QDS (quality) */
+		qpm = msg[startIndex++];
+	}
+
+	public ParameterNormalizedValue(int objectAddress, float normalizedValue, byte qpm) {
+		super(objectAddress);
+		scaledValue = new ScaledValue();
+
+		this.setNormalizedValue(normalizedValue);
+
+		this.qpm = qpm;
+	}
+
+	public ParameterNormalizedValue(int objectAddress, short rawValue, byte qpm) {
+		super(objectAddress);
+		scaledValue = new ScaledValue(rawValue);
+		this.qpm = qpm;
 	}
 
 	@Override
-	public TypeID getType() {
-		return TypeID.P_ME_NA_1;
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+
+		frame.appendBytes(scaledValue.getEncodedValue());
+
+		frame.setNextByte(qpm);
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 3;
+	}
+
+	public final float getNormalizedValue() {
+		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
+	}
+
+	public final byte getQPM() {
+		return qpm;
+	}
+
+	public final short getRawValue() {
+		return scaledValue.getShortValue();
 	}
 
 	@Override
@@ -51,18 +102,9 @@ public class ParameterNormalizedValue extends InformationObject {
 		return false;
 	}
 
-	private ScaledValue scaledValue;
-
-	public final short getRawValue() {
-		return scaledValue.getShortValue();
-	}
-
-	public final void setRawValue(short value) {
-		scaledValue.setShortValue(value);
-	}
-
-	public final float getNormalizedValue() {
-		return (float) (scaledValue.getValue() + 0.5) / (float) 32767.5;
+	@Override
+	public TypeID getType() {
+		return TypeID.P_ME_NA_1;
 	}
 
 	public final void setNormalizedValue(float value) {
@@ -76,59 +118,7 @@ public class ParameterNormalizedValue extends InformationObject {
 		this.scaledValue.setValue((int) ((value * 32767.5) - 0.5));
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte qpm;
-	private byte qpm;
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte getQPM()
-	public final byte getQPM() {
-		return qpm;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public ParameterNormalizedValue(int objectAddress, float normalizedValue, byte qpm)
-	public ParameterNormalizedValue(int objectAddress, float normalizedValue, byte qpm) {
-		super(objectAddress);
-		scaledValue = new ScaledValue();
-
-		this.setNormalizedValue(normalizedValue);
-
-		this.qpm = qpm;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public ParameterNormalizedValue(int objectAddress, short rawValue, byte qpm)
-	public ParameterNormalizedValue(int objectAddress, short rawValue, byte qpm) {
-		super(objectAddress);
-		scaledValue = new ScaledValue(rawValue);
-		this.qpm = qpm;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal ParameterNormalizedValue(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
-	public ParameterNormalizedValue(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
-			throws ASDUParsingException {
-		super(parameters, msg, startIndex, false);
-		startIndex += parameters.getSizeOfIOA(); // skip IOA
-
-		if ((msg.length - startIndex) < GetEncodedSize()) {
-			throw new ASDUParsingException("Message too small");
-		}
-
-		scaledValue = new ScaledValue(msg, startIndex);
-		startIndex += 2;
-
-		/* parse QDS (quality) */
-		qpm = msg[startIndex++];
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-
-		frame.appendBytes(scaledValue.GetEncodedValue());
-
-		frame.setNextByte(qpm);
+	public final void setRawValue(short value) {
+		scaledValue.setShortValue(value);
 	}
 }

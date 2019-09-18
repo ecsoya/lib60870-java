@@ -22,7 +22,7 @@ public class DelayAcquisitionCommand extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		/* parse CP16Time2a (time stamp) */
@@ -35,7 +35,17 @@ public class DelayAcquisitionCommand extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.appendBytes(delay.getEncodedValue());
+	}
+
+	public CP16Time2a getDelay() {
+		return delay;
+	}
+
+	@Override
+	public int getEncodedSize() {
 		return 2;
 	}
 
@@ -47,16 +57,6 @@ public class DelayAcquisitionCommand extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.C_CD_NA_1;
-	}
-
-	public CP16Time2a getDelay() {
-		return delay;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.appendBytes(delay.getEncodedValue());
 	}
 
 }

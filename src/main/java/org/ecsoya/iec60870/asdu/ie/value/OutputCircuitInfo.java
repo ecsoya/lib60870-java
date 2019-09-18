@@ -31,20 +31,8 @@ public class OutputCircuitInfo {
 
 	public byte encodedValue;
 
-	public final byte getEncodedValue() {
-		return this.encodedValue;
-	}
-
-	public final void setEncodedValue(byte value) {
-		encodedValue = value;
-	}
-
 	public OutputCircuitInfo() {
 		this.encodedValue = 0;
-	}
-
-	public OutputCircuitInfo(byte encodedValue) {
-		this.encodedValue = encodedValue;
 	}
 
 	public OutputCircuitInfo(boolean gc, boolean cl1, boolean cl2, boolean cl3) {
@@ -54,21 +42,8 @@ public class OutputCircuitInfo {
 		setCL3(cl3);
 	}
 
-	/**
-	 * General command to output circuit
-	 * 
-	 * <value><c>true</c> if set, otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getGC() {
-		return ((encodedValue & 0x01) != 0);
-	}
-
-	public final void setGC(boolean value) {
-		if (value) {
-			encodedValue |= 0x01;
-		} else {
-			encodedValue &= 0xfe;
-		}
+	public OutputCircuitInfo(byte encodedValue) {
+		this.encodedValue = encodedValue;
 	}
 
 	/**
@@ -80,14 +55,6 @@ public class OutputCircuitInfo {
 		return ((encodedValue & 0x02) != 0);
 	}
 
-	public final void setCL1(boolean value) {
-		if (value) {
-			encodedValue |= 0x02;
-		} else {
-			encodedValue &= 0xfd;
-		}
-	}
-
 	/**
 	 * Command to output circuit phase L2
 	 * 
@@ -95,14 +62,6 @@ public class OutputCircuitInfo {
 	 */
 	public final boolean getCL2() {
 		return ((encodedValue & 0x04) != 0);
-	}
-
-	public final void setCL2(boolean value) {
-		if (value) {
-			encodedValue |= 0x04;
-		} else {
-			encodedValue &= 0xfb;
-		}
 	}
 
 	/**
@@ -114,11 +73,52 @@ public class OutputCircuitInfo {
 		return ((encodedValue & 0x08) != 0);
 	}
 
+	public final byte getEncodedValue() {
+		return this.encodedValue;
+	}
+
+	/**
+	 * General command to output circuit
+	 * 
+	 * <value><c>true</c> if set, otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getGC() {
+		return ((encodedValue & 0x01) != 0);
+	}
+
+	public final void setCL1(boolean value) {
+		if (value) {
+			encodedValue |= 0x02;
+		} else {
+			encodedValue &= 0xfd;
+		}
+	}
+
+	public final void setCL2(boolean value) {
+		if (value) {
+			encodedValue |= 0x04;
+		} else {
+			encodedValue &= 0xfb;
+		}
+	}
+
 	public final void setCL3(boolean value) {
 		if (value) {
 			encodedValue |= 0x08;
 		} else {
 			encodedValue &= 0xf7;
+		}
+	}
+
+	public final void setEncodedValue(byte value) {
+		encodedValue = value;
+	}
+
+	public final void setGC(boolean value) {
+		if (value) {
+			encodedValue |= 0x01;
+		} else {
+			encodedValue &= 0xfe;
 		}
 	}
 

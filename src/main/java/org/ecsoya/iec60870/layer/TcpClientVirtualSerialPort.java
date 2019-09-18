@@ -28,64 +28,33 @@ public class TcpClientVirtualSerialPort implements SerialStream {
 	private int connectTimeoutInMs = 1000;
 	private int waitRetryConnect = 1000;
 
-	private void DebugLog(String msg) {
-		if (debugOutput) {
-			System.out.print("CS101 TCP link layer: ");
-			System.out.println(msg);
-		}
-	}
-
-	/**
-	 * @param debugOutput the debugOutput to set
-	 */
-	public void setDebugOutput(boolean debugOutput) {
-		this.debugOutput = debugOutput;
-	}
-
-	/**
-	 * @return the debugOutput
-	 */
-	public boolean isDebugOutput() {
-		return debugOutput;
-	}
-
 	public TcpClientVirtualSerialPort(String hostname, int tcpPort) {
 		this.hostname = hostname;
 		this.tcpPort = tcpPort;
 	}
 
-	private void ConnectSocketWithTimeout() throws IOException {
-		InetSocketAddress
-
-		ipAddress = new InetSocketAddress(hostname, tcpPort);
-
-		// Create a TCP/IP socket.
-		conSocket = SocketFactory.getDefault().createSocket();
-
-		try {
-			conSocket.connect(ipAddress, connectTimeoutInMs);
-		} catch (IOException e) {
-			conSocket.close();
-			conSocket = null;
-			throw e;
+	@Override
+	public void close() throws IOException {
+		if (socketStream != null) {
+			socketStream.close();
 		}
 	}
 
-	private Runnable ConnectionThread() {
+	private Runnable connectionThread() {
 		return new Runnable() {
 
 			@Override
 			public void run() {
 				running = true;
 
-				DebugLog("Starting connection thread");
+				debugLog("Starting connection thread");
 
 				while (running) {
 
 					try {
-						DebugLog("Connecting to " + hostname + ":" + tcpPort);
+						debugLog("Connecting to " + hostname + ":" + tcpPort);
 
-						ConnectSocketWithTimeout();
+						connectSocketWithTimeout();
 
 						socketStream = new DataOutputStream(new BufferedOutputStream(conSocket.getOutputStream()));
 
@@ -125,27 +94,42 @@ public class TcpClientVirtualSerialPort implements SerialStream {
 
 	}
 
-	public void Start() {
-		if (running == false) {
-			connectionThread = new Thread(ConnectionThread());
+	private void connectSocketWithTimeout() throws IOException {
+		InetSocketAddress
 
-			connectionThread.start();
+		ipAddress = new InetSocketAddress(hostname, tcpPort);
+
+		// Create a TCP/IP socket.
+		conSocket = SocketFactory.getDefault().createSocket();
+
+		try {
+			conSocket.connect(ipAddress, connectTimeoutInMs);
+		} catch (IOException e) {
+			conSocket.close();
+			conSocket = null;
+			throw e;
 		}
 	}
 
-	public void Stop() throws IOException {
-		if (running == true) {
-			running = false;
-
-			if (conSocket != null)
-				conSocket.close();
-
-			try {
-				connectionThread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+	private void debugLog(String msg) {
+		if (debugOutput) {
+			System.out.print("CS101 TCP link layer: ");
+			System.out.println(msg);
 		}
+	}
+
+	@Override
+	public void flush() throws IOException {
+		if (socketStream != null) {
+			socketStream.flush();
+		}
+	}
+
+	/**
+	 * @return the debugOutput
+	 */
+	public boolean isDebugOutput() {
+		return debugOutput;
 	}
 
 	/*************************
@@ -171,32 +155,38 @@ public class TcpClientVirtualSerialPort implements SerialStream {
 		return 0;
 	}
 
+	/**
+	 * @param debugOutput the debugOutput to set
+	 */
+	public void setDebugOutput(boolean debugOutput) {
+		this.debugOutput = debugOutput;
+	}
+
 	@Override
 	public void setReadTimeout(int timeout) {
 		this.readTimeout = timeout;
 	}
 
-	public void Write(byte[] buffer, int offset, int count) {
-		if (socketStream != null) {
+	public void start() {
+		if (running == false) {
+			connectionThread = new Thread(connectionThread());
+
+			connectionThread.start();
+		}
+	}
+
+	public void stop() throws IOException {
+		if (running == true) {
+			running = false;
+
+			if (conSocket != null)
+				conSocket.close();
+
 			try {
-				socketStream.write(buffer, offset, count);
-			} catch (IOException e) {
-				connected = false;
+				connectionThread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
-		}
-	}
-
-	@Override
-	public void flush() throws IOException {
-		if (socketStream != null) {
-			socketStream.flush();
-		}
-	}
-
-	@Override
-	public void write(int b) throws IOException {
-		if (socketStream != null && connected) {
-			socketStream.write(b);
 		}
 	}
 
@@ -214,9 +204,9 @@ public class TcpClientVirtualSerialPort implements SerialStream {
 	}
 
 	@Override
-	public void close() throws IOException {
-		if (socketStream != null) {
-			socketStream.close();
+	public void write(int b) throws IOException {
+		if (socketStream != null && connected) {
+			socketStream.write(b);
 		}
 	}
 }

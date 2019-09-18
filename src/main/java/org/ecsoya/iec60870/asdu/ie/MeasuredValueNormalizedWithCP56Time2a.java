@@ -17,17 +17,6 @@ public class MeasuredValueNormalizedWithCP56Time2a extends MeasuredValueNormaliz
 	private final CP56Time2a timestamp;
 
 	/**
-	 * @param objectAddress
-	 * @param value
-	 * @param quality
-	 */
-	public MeasuredValueNormalizedWithCP56Time2a(int objectAddress, float value, QualityDescriptor quality,
-			CP56Time2a timestamp) {
-		super(objectAddress, value, quality);
-		this.timestamp = timestamp;
-	}
-
-	/**
 	 * @param parameters
 	 * @param msg
 	 * @param startIndex
@@ -40,13 +29,24 @@ public class MeasuredValueNormalizedWithCP56Time2a extends MeasuredValueNormaliz
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 3; /* normalized value + quality */
 
 		/* parse CP56Time2a (time stamp) */
 		timestamp = new CP56Time2a(msg, startIndex);
+	}
+
+	/**
+	 * @param objectAddress
+	 * @param value
+	 * @param quality
+	 */
+	public MeasuredValueNormalizedWithCP56Time2a(int objectAddress, float value, QualityDescriptor quality,
+			CP56Time2a timestamp) {
+		super(objectAddress, value, quality);
+		this.timestamp = timestamp;
 	}
 
 	/*
@@ -56,9 +56,19 @@ public class MeasuredValueNormalizedWithCP56Time2a extends MeasuredValueNormaliz
 	 * iec60870.Frame, org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
 	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.ecsoya.iec60870.asdu.ie.MeasuredValueNormalized#GetEncodedSize()
+	 */
+	@Override
+	public int getEncodedSize() {
+		return 10;
 	}
 
 	/*
@@ -70,16 +80,6 @@ public class MeasuredValueNormalizedWithCP56Time2a extends MeasuredValueNormaliz
 	@Override
 	public boolean getSupportsSequence() {
 		return false;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.MeasuredValueNormalized#GetEncodedSize()
-	 */
-	@Override
-	public int GetEncodedSize() {
-		return 10;
 	}
 
 	/*

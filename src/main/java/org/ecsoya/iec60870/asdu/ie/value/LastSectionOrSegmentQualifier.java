@@ -9,8 +9,11 @@ public enum LastSectionOrSegmentQualifier {
 
 	public static final int SIZE = java.lang.Byte.SIZE;
 
-	private byte byteValue;
 	private static java.util.HashMap<Byte, LastSectionOrSegmentQualifier> mappings;
+
+	public static LastSectionOrSegmentQualifier forValue(byte value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Byte, LastSectionOrSegmentQualifier> getMappings() {
 		if (mappings == null) {
@@ -23,6 +26,8 @@ public enum LastSectionOrSegmentQualifier {
 		return mappings;
 	}
 
+	private byte byteValue;
+
 	private LastSectionOrSegmentQualifier(byte value) {
 		byteValue = value;
 		getMappings().put(value, this);
@@ -30,9 +35,5 @@ public enum LastSectionOrSegmentQualifier {
 
 	public byte getValue() {
 		return byteValue;
-	}
-
-	public static LastSectionOrSegmentQualifier forValue(byte value) {
-		return getMappings().get(value);
 	}
 }

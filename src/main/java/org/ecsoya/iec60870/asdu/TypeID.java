@@ -94,8 +94,11 @@ public enum TypeID {
 	F_DR_TA_1(126),
 	F_SC_NB_1(127);
 
-	private final int intValue;
 	private static java.util.HashMap<Integer, TypeID> mappings;
+
+	public static TypeID forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, TypeID> getMappings() {
 		if (mappings == null) {
@@ -108,6 +111,8 @@ public enum TypeID {
 		return mappings;
 	}
 
+	private final int intValue;
+
 	private TypeID(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -115,9 +120,5 @@ public enum TypeID {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static TypeID forValue(int value) {
-		return getMappings().get(value);
 	}
 }

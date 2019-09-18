@@ -24,12 +24,11 @@ import org.ecsoya.iec60870.ASDUParsingException;
  */
 
 public class ScaledValue {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte[] encodedValue = new byte[2];
 	private byte[] encodedValue = new byte[2];
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public ScaledValue(byte[] msg, int startIndex)
+	public ScaledValue() {
+	}
+
 	public ScaledValue(byte[] msg, int startIndex) throws ASDUParsingException {
 		if (msg.length < startIndex + 2) {
 			throw new ASDUParsingException("Message too small for parsing ScaledValue");
@@ -40,9 +39,6 @@ public class ScaledValue {
 		}
 	}
 
-	public ScaledValue() {
-	}
-
 	public ScaledValue(int value) {
 		this.setValue(value);
 	}
@@ -51,10 +47,17 @@ public class ScaledValue {
 		this.setShortValue(value);
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte[] GetEncodedValue()
-	public final byte[] GetEncodedValue() {
+	public final byte[] getEncodedValue() {
 		return encodedValue;
+	}
+
+	public final short getShortValue() {
+		short uintVal;
+
+		uintVal = encodedValue[0];
+		uintVal += (short) (encodedValue[1] * 0x100);
+
+		return (short) uintVal;
 	}
 
 	public final int getValue() {
@@ -70,6 +73,13 @@ public class ScaledValue {
 		return value;
 	}
 
+	public final void setShortValue(short value) {
+		short uintVal = (short) value;
+
+		encodedValue[0] = (byte) (uintVal % 256);
+		encodedValue[1] = (byte) (uintVal / 256);
+	}
+
 	public final void setValue(int value) {
 		if (value > 32767) {
 			value = 32767;
@@ -79,38 +89,8 @@ public class ScaledValue {
 
 		short valueToEncode = (short) value;
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: encodedValue[0] = (byte)(valueToEncode % 256);
 		encodedValue[0] = (byte) (valueToEncode % 256);
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: encodedValue[1] = (byte)(valueToEncode / 256);
 		encodedValue[1] = (byte) (valueToEncode / 256);
-	}
-
-	public final short getShortValue() {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: UInt16 uintVal;
-		short uintVal;
-
-		uintVal = encodedValue[0];
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: uintVal += (UInt16)(encodedValue [1] * 0x100);
-		uintVal += (short) (encodedValue[1] * 0x100);
-
-		return (short) uintVal;
-	}
-
-	public final void setShortValue(short value) {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: UInt16 uintVal = (UInt16)value;
-		short uintVal = (short) value;
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: encodedValue[0] = (byte)(uintVal % 256);
-		encodedValue[0] = (byte) (uintVal % 256);
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: encodedValue[1] = (byte)(uintVal / 256);
-		encodedValue[1] = (byte) (uintVal / 256);
 	}
 
 	@Override

@@ -9,8 +9,11 @@ public enum AcknowledgeQualifier {
 
 	public static final int SIZE = java.lang.Integer.SIZE;
 
-	private int intValue;
 	private static java.util.HashMap<Integer, AcknowledgeQualifier> mappings;
+
+	public static AcknowledgeQualifier forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, AcknowledgeQualifier> getMappings() {
 		if (mappings == null) {
@@ -23,6 +26,8 @@ public enum AcknowledgeQualifier {
 		return mappings;
 	}
 
+	private int intValue;
+
 	private AcknowledgeQualifier(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -30,9 +35,5 @@ public enum AcknowledgeQualifier {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static AcknowledgeQualifier forValue(int value) {
-		return getMappings().get(value);
 	}
 }

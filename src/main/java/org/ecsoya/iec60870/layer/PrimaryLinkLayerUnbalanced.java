@@ -15,25 +15,6 @@ import org.ecsoya.iec60870.BufferFrame;
  */
 public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPrimaryLinkLayerUnbalanced {
 
-	private LinkLayer linkLayer;
-	private Consumer<String> debugLog;
-
-	// private boolean waitingForResponse = false;
-
-	private List<SlaveConnection> slaveConnections;
-
-	/// <summary>
-	/// The current active slave connection.
-	/// </summary>
-	private SlaveConnection currentSlave = null;
-
-	private BufferFrame nextBroadcastMessage = null;
-
-	private IPrimaryLinkLayerCallbacks callbacks = null;
-
-	private LinkLayerStateChanged stateChanged = null;
-	private Object stateChangedParameter = null;
-
 	// can this class implement Master interface?
 	private class SlaveConnection {
 
@@ -65,17 +46,6 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 		private LinkLayer linkLayer;
 
-		private void SetState(LinkLayerState newState) {
-			if (linkLayerState != newState) {
-
-				linkLayerState = newState;
-
-				if (linkLayerUnbalanced.stateChanged != null)
-					linkLayerUnbalanced.stateChanged.performStateChanged(linkLayerUnbalanced.stateChangedParameter,
-							address, newState);
-			}
-		}
-
 		public SlaveConnection(int address, LinkLayer linkLayer, Consumer<String> debugLog,
 				PrimaryLinkLayerUnbalanced linkLayerUnbalanced) {
 			this.address = address;
@@ -84,11 +54,10 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 			this.linkLayerUnbalanced = linkLayerUnbalanced;
 		}
 
-		public boolean IsMessageWaitingToSend() {
-			if (requestClass1Data || requestClass2Data || (nextMessage != null))
-				return true;
-			else
-				return false;
+		private void DebugLog(String log) {
+			if (debugLog != null) {
+				debugLog.accept(log);
+			}
 		}
 
 		void HandleMessage(FunctionCodeSecondary fcs, boolean acd, boolean dfc, int address, byte[] msg,
@@ -177,7 +146,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 					DebugLog("PLL - SEND RESET REMOTE LINK");
 
-					linkLayer.SendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, address, false, false);
+					linkLayer.sendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, address, false, false);
 
 					lastSendTime = System.currentTimeMillis();
 					waitingForResponse = true;
@@ -197,7 +166,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 				DebugLog("PLL - received USER DATA");
 
 				if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_REQUEST_RESPOND) {
-					linkLayerUnbalanced.callbacks.UserData(address, msg, userDataStart, userDataLength);
+					linkLayerUnbalanced.callbacks.userData(address, msg, userDataStart, userDataLength);
 
 					requestClass1Data = false;
 					requestClass2Data = false;
@@ -252,12 +221,19 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 			if (acd) {
 				if (linkLayerUnbalanced.callbacks != null)
-					linkLayerUnbalanced.callbacks.AccessDemand(address);
+					linkLayerUnbalanced.callbacks.accessDemand(address);
 			}
 
 			DebugLog("PLL RECV - old state: " + primaryState + " new state: " + newState);
 
 			primaryState = newState;
+		}
+
+		public boolean IsMessageWaitingToSend() {
+			if (requestClass1Data || requestClass2Data || (nextMessage != null))
+				return true;
+			else
+				return false;
 		}
 
 		public void RunStateMachine() throws IOException {
@@ -280,7 +256,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 				if (waitingForResponse) {
 
 					if (System.currentTimeMillis() > (lastSendTime + linkLayer.getTimeoutForACK())) {
-						linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_LINK_STATUS, address, false, false);
+						linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_LINK_STATUS, address, false, false);
 
 						lastSendTime = System.currentTimeMillis();
 					}
@@ -289,7 +265,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 					DebugLog("PLL - SEND RESET REMOTE LINK");
 
-					linkLayer.SendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, address, false, false);
+					linkLayer.sendFixedFramePrimary(FunctionCodePrimary.RESET_REMOTE_LINK, address, false, false);
 
 					lastSendTime = System.currentTimeMillis();
 					waitingForResponse = true;
@@ -320,7 +296,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 				if (sendLinkLayerTestFunction) {
 					DebugLog("PLL - SEND TEST LINK");
 
-					linkLayer.SendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK, address, nextFcb, true);
+					linkLayer.sendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK, address, nextFcb, true);
 
 					nextFcb = !nextFcb;
 					lastSendTime = System.currentTimeMillis();
@@ -333,12 +309,12 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 					if (requestClass1Data) {
 						DebugLog("PLL - SEND FC 10 - REQ UD 1");
 
-						linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_1, address, nextFcb,
+						linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_1, address, nextFcb,
 								true);
 					} else {
 						DebugLog("PLL - SEND FC 11 - REQ UD 2");
 
-						linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_2, address, nextFcb,
+						linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_2, address, nextFcb,
 								true);
 					}
 
@@ -354,7 +330,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 						DebugLog("PLL - SEND FC 03 - USER DATA CONFIRMED");
 
-						linkLayer.SendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED, address,
+						linkLayer.sendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED, address,
 								nextFcb, true, asdu);
 
 						lastSentASDU = nextMessage;
@@ -388,14 +364,14 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 							DebugLog("PLL - SEND FC 02 - RESET REMOTE LINK [REPEAT]");
 
-							linkLayer.SendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK, address,
+							linkLayer.sendFixedFramePrimary(FunctionCodePrimary.TEST_FUNCTION_FOR_LINK, address,
 									!nextFcb, true);
 
 						} else {
 
 							DebugLog("PLL - SEND FC 03 - USER DATA CONFIRMED [REPEAT]");
 
-							linkLayer.SendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED, address,
+							linkLayer.sendVariableLengthFramePrimary(FunctionCodePrimary.USER_DATA_CONFIRMED, address,
 									!nextFcb, true, lastSentASDU);
 
 						}
@@ -424,13 +400,13 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 						if (requestClass1Data) {
 							DebugLog("PLL - SEND FC 10 - REQ UD 1 [REPEAT]");
 
-							linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_1, address,
+							linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_1, address,
 									!nextFcb, true);
 						} else if (requestClass2Data) {
 
 							DebugLog("PLL - SEND FC 11 - REQ UD 2 [REPEAT]");
 
-							linkLayer.SendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_2, address,
+							linkLayer.sendFixedFramePrimary(FunctionCodePrimary.REQUEST_USER_DATA_CLASS_2, address,
 									!nextFcb, true);
 						}
 
@@ -453,87 +429,39 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 		}
 
-		private void DebugLog(String log) {
-			if (debugLog != null) {
-				debugLog.accept(log);
+		private void SetState(LinkLayerState newState) {
+			if (linkLayerState != newState) {
+
+				linkLayerState = newState;
+
+				if (linkLayerUnbalanced.stateChanged != null)
+					linkLayerUnbalanced.stateChanged.performStateChanged(linkLayerUnbalanced.stateChangedParameter,
+							address, newState);
 			}
 		}
 	}
 
-	/********************************
-	 * IPrimaryLinkLayerUnbalanced
-	 ********************************/
+	private LinkLayer linkLayer;
 
-	public void ResetCU(int slaveAddress) {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
+	// private boolean waitingForResponse = false;
 
-		if (slave != null)
-			slave.resetCu = true;
-	}
+	private Consumer<String> debugLog;
 
-	public boolean IsChannelAvailable(int slaveAddress) {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
+	private List<SlaveConnection> slaveConnections;
 
-		if (slave != null) {
-			if (slave.IsMessageWaitingToSend() == false)
-				return true;
-		}
+	/// <summary>
+	/// The current active slave connection.
+	/// </summary>
+	private SlaveConnection currentSlave = null;
 
-		return false;
-	}
+	private BufferFrame nextBroadcastMessage = null;
 
-	public void RequestClass1Data(int slaveAddress) {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
+	private IPrimaryLinkLayerCallbacks callbacks = null;
+	private LinkLayerStateChanged stateChanged = null;
 
-		if (slave != null) {
-			slave.requestClass1Data = true;
-			;
-		}
-	}
+	private Object stateChangedParameter = null;
 
-	public void RequestClass2Data(int slaveAddress) throws LinkLayerBusyException {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
-
-		if (slave != null) {
-			if (slave.IsMessageWaitingToSend())
-				throw new LinkLayerBusyException("Message pending");
-			else
-				slave.requestClass2Data = true;
-		}
-	}
-
-	public void SendConfirmed(int slaveAddress, BufferFrame message) throws LinkLayerBusyException {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
-
-		if (slave != null) {
-			if (slave.nextMessage != null)
-				throw new LinkLayerBusyException("Message pending");
-			else {
-				slave.nextMessage = message.clone();
-				slave.requireConfirmation = true;
-			}
-		}
-	}
-
-	public void SendNoReply(int slaveAddress, BufferFrame message) throws LinkLayerBusyException {
-		if (slaveAddress == linkLayer.GetBroadcastAddress()) {
-			if (nextBroadcastMessage != null)
-				throw new LinkLayerBusyException("Broadcast message pending");
-			else
-				nextBroadcastMessage = message;
-		} else {
-			SlaveConnection slave = GetSlaveConnection(slaveAddress);
-
-			if (slave != null) {
-				if (slave.IsMessageWaitingToSend())
-					throw new LinkLayerBusyException("Message pending");
-				else {
-					slave.nextMessage = message;
-					slave.requireConfirmation = false;
-				}
-			}
-		}
-	}
+	private int currentSlaveIndex = 0;
 
 	/********************************
 	 * END IPrimaryLinkLayerUnbalanced
@@ -547,7 +475,20 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 		this.slaveConnections = new ArrayList<SlaveConnection>();
 	}
 
-	private SlaveConnection GetSlaveConnection(int slaveAddres) {
+	public void addSlaveConnection(int slaveAddress) {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+		if (slave == null)
+			slaveConnections.add(new SlaveConnection(slaveAddress, linkLayer, debugLog, this));
+	}
+
+	private void debugLog(String log) {
+		if (debugLog != null) {
+			debugLog.accept(log);
+		}
+	}
+
+	private SlaveConnection getSlaveConnection(int slaveAddres) {
 		for (SlaveConnection connection : slaveConnections) {
 			if (connection.address == slaveAddres)
 				return connection;
@@ -556,15 +497,8 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 		return null;
 	}
 
-	public void AddSlaveConnection(int slaveAddress) {
-		SlaveConnection slave = GetSlaveConnection(slaveAddress);
-
-		if (slave == null)
-			slaveConnections.add(new SlaveConnection(slaveAddress, linkLayer, debugLog, this));
-	}
-
-	public LinkLayerState GetStateOfSlave(int slaveAddress) throws Exception {
-		SlaveConnection connection = GetSlaveConnection(slaveAddress);
+	public LinkLayerState getStateOfSlave(int slaveAddress) throws Exception {
+		SlaveConnection connection = getSlaveConnection(slaveAddress);
 
 		if (connection != null)
 			return connection.linkLayerState;
@@ -572,27 +506,67 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 			throw new Exception("No slave with this address found");
 	}
 
-	public void HandleMessage(FunctionCodeSecondary fcs, boolean acd, boolean dfc, int address, byte[] msg,
+	public void handleMessage(FunctionCodeSecondary fcs, boolean acd, boolean dfc, int address, byte[] msg,
 			int userDataStart, int userDataLength) throws Exception {
 		SlaveConnection slave = null;
 
 		if (address == -1)
 			slave = currentSlave;
 		else
-			slave = GetSlaveConnection(address);
+			slave = getSlaveConnection(address);
 
 		if (slave != null) {
 
 			slave.HandleMessage(fcs, acd, dfc, address, msg, userDataStart, userDataLength);
 
 		} else {
-			DebugLog("PLL RECV - response from unknown slave " + address + " !");
+			debugLog("PLL RECV - response from unknown slave " + address + " !");
 		}
 	}
 
-	private int currentSlaveIndex = 0;
+	public boolean isChannelAvailable(int slaveAddress) {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
 
-	public void RunStateMachine() throws IOException {
+		if (slave != null) {
+			if (slave.IsMessageWaitingToSend() == false)
+				return true;
+		}
+
+		return false;
+	}
+
+	public void requestClass1Data(int slaveAddress) {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+		if (slave != null) {
+			slave.requestClass1Data = true;
+			;
+		}
+	}
+
+	public void requestClass2Data(int slaveAddress) throws LinkLayerBusyException {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+		if (slave != null) {
+			if (slave.IsMessageWaitingToSend())
+				throw new LinkLayerBusyException("Message pending");
+			else
+				slave.requestClass2Data = true;
+		}
+	}
+
+	/********************************
+	 * IPrimaryLinkLayerUnbalanced
+	 ********************************/
+
+	public void resetCU(int slaveAddress) {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+		if (slave != null)
+			slave.resetCu = true;
+	}
+
+	public void runStateMachine() throws IOException {
 		// run all the link layer state machines for the registered slaves
 
 		if (slaveConnections.size() > 0) {
@@ -612,17 +586,44 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 		}
 	}
 
-	public void SendLinkLayerTestFunction() {
+	public void sendConfirmed(int slaveAddress, BufferFrame message) throws LinkLayerBusyException {
+		SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+		if (slave != null) {
+			if (slave.nextMessage != null)
+				throw new LinkLayerBusyException("Message pending");
+			else {
+				slave.nextMessage = message.clone();
+				slave.requireConfirmation = true;
+			}
+		}
 	}
 
-	public void SetLinkLayerStateChanged(LinkLayerStateChanged callback, Object parameter) {
+	public void sendLinkLayerTestFunction() {
+	}
+
+	public void sendNoReply(int slaveAddress, BufferFrame message) throws LinkLayerBusyException {
+		if (slaveAddress == linkLayer.GetBroadcastAddress()) {
+			if (nextBroadcastMessage != null)
+				throw new LinkLayerBusyException("Broadcast message pending");
+			else
+				nextBroadcastMessage = message;
+		} else {
+			SlaveConnection slave = getSlaveConnection(slaveAddress);
+
+			if (slave != null) {
+				if (slave.IsMessageWaitingToSend())
+					throw new LinkLayerBusyException("Message pending");
+				else {
+					slave.nextMessage = message;
+					slave.requireConfirmation = false;
+				}
+			}
+		}
+	}
+
+	public void setLinkLayerStateChanged(LinkLayerStateChanged callback, Object parameter) {
 		stateChanged = callback;
 		stateChangedParameter = parameter;
-	}
-
-	private void DebugLog(String log) {
-		if (debugLog != null) {
-			debugLog.accept(log);
-		}
 	}
 }

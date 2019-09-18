@@ -13,28 +13,37 @@ import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
 public class FilesAvailable {
 	public static class CS101n104File {
 
+		public IFileProvider provider = null;
+
+		public Object selectedBy = null;
+
 		public CS101n104File(IFileProvider file) {
 			this.provider = file;
 		}
-
-		public IFileProvider provider = null;
-		public Object selectedBy = null;
 
 	}
 
 	private List<CS101n104File> availableFiles = new ArrayList<CS101n104File>();
 
-	public CS101n104File GetFile(int ca, int ioa, NameOfFile nof) {
+	public void addFile(IFileProvider file) {
+		synchronized (availableFiles) {
+
+			availableFiles.add(new CS101n104File(file));
+		}
+
+	}
+
+	public CS101n104File getFile(int ca, int ioa, NameOfFile nof) {
 		synchronized (availableFiles) {
 
 			for (CS101n104File file : availableFiles) {
-				if ((file.provider.GetCA() == ca) && (file.provider.GetIOA() == ioa)) {
+				if ((file.provider.getCommonAddress() == ca) && (file.provider.getInformationObjectAddress() == ioa)) {
 
 					if (nof == NameOfFile.DEFAULT)
 						return file;
 					else {
 
-						if (nof == file.provider.GetNameOfFile())
+						if (nof == file.provider.getNameOfFile())
 							return file;
 					}
 				}
@@ -44,7 +53,21 @@ public class FilesAvailable {
 		return null;
 	}
 
-	void SendDirectoy(IMasterConnection masterConnection, boolean spontaneous) {
+	public void removeFile(IFileProvider file) {
+		synchronized (availableFiles) {
+
+			for (CS101n104File availableFile : availableFiles) {
+
+				if (availableFile.provider == file) {
+					availableFiles.remove(availableFile);
+					return;
+				}
+
+			}
+		}
+	}
+
+	void sendDirectoy(IMasterConnection masterConnection, boolean spontaneous) {
 		CauseOfTransmission cot;
 
 		if (spontaneous)
@@ -66,29 +89,29 @@ public class FilesAvailable {
 
 				boolean newAsdu = false;
 
-				if (file.provider.GetCA() != currentCa) {
-					currentCa = file.provider.GetCA();
+				if (file.provider.getCommonAddress() != currentCa) {
+					currentCa = file.provider.getCommonAddress();
 					newAsdu = true;
 				}
 
-				if (currentIOA != (file.provider.GetIOA() - 1)) {
+				if (currentIOA != (file.provider.getInformationObjectAddress() - 1)) {
 					newAsdu = true;
 				}
 
 				if (newAsdu) {
 					if (directoryAsdu != null) {
-						masterConnection.SendASDU(directoryAsdu);
+						masterConnection.sendASDU(directoryAsdu);
 						directoryAsdu = null;
 					}
 				}
 
-				currentIOA = file.provider.GetIOA();
+				currentIOA = file.provider.getInformationObjectAddress();
 
 				i++;
 
 				if (directoryAsdu == null) {
 					System.out.println("Send directory ASDU");
-					directoryAsdu = new ASDU(masterConnection.GetApplicationLayerParameters(), cot, false, false,
+					directoryAsdu = new ASDU(masterConnection.getApplicationLayerParameters(), cot, false, false,
 							(byte) 0, currentCa, true);
 				}
 
@@ -99,8 +122,8 @@ public class FilesAvailable {
 				if (lastFile)
 					sof = 0x20;
 
-				InformationObject io = new FileDirectory(currentIOA, file.provider.GetNameOfFile(),
-						file.provider.GetFileSize(), sof, new CP56Time2a(file.provider.GetFileDate()));
+				InformationObject io = new FileDirectory(currentIOA, file.provider.getNameOfFile(),
+						file.provider.getFileSize(), sof, new CP56Time2a(file.provider.getFileDate()));
 
 				directoryAsdu.addInformationObject(io);
 			}
@@ -108,31 +131,9 @@ public class FilesAvailable {
 			if (directoryAsdu != null) {
 
 				System.out.println("Send directory ASDU");
-				masterConnection.SendASDU(directoryAsdu);
+				masterConnection.sendASDU(directoryAsdu);
 			}
 
-		}
-	}
-
-	public void AddFile(IFileProvider file) {
-		synchronized (availableFiles) {
-
-			availableFiles.add(new CS101n104File(file));
-		}
-
-	}
-
-	public void RemoveFile(IFileProvider file) {
-		synchronized (availableFiles) {
-
-			for (CS101n104File availableFile : availableFiles) {
-
-				if (availableFile.provider == file) {
-					availableFiles.remove(availableFile);
-					return;
-				}
-
-			}
 		}
 	}
 

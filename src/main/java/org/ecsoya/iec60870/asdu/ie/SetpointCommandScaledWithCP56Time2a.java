@@ -18,17 +18,6 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 	private final CP56Time2a timestamp;
 
 	/**
-	 * @param objectAddress
-	 * @param value
-	 * @param qos
-	 */
-	public SetpointCommandScaledWithCP56Time2a(int objectAddress, ScaledValue value, SetpointCommandQualifier qos,
-			CP56Time2a timestamp) {
-		super(objectAddress, value, qos);
-		this.timestamp = timestamp;
-	}
-
-	/**
 	 * @param parameters
 	 * @param msg
 	 * @param startIndex
@@ -39,7 +28,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		startIndex += 3; /* scaled value + qualifier */
@@ -47,14 +36,28 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 		this.timestamp = new CP56Time2a(msg, startIndex);
 	}
 
+	/**
+	 * @param objectAddress
+	 * @param value
+	 * @param qos
+	 */
+	public SetpointCommandScaledWithCP56Time2a(int objectAddress, ScaledValue value, SetpointCommandQualifier qos,
+			CP56Time2a timestamp) {
+		super(objectAddress, value, qos);
+		this.timestamp = timestamp;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#getType()
+	 * @see
+	 * org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#Encode(org.ecsoya.iec60870.
+	 * Frame, org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
 	 */
 	@Override
-	public TypeID getType() {
-		return TypeID.C_SE_TB_1;
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.appendBytes(this.timestamp.getEncodedValue());
 	}
 
 	/*
@@ -63,7 +66,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#GetEncodedSize()
 	 */
 	@Override
-	public int GetEncodedSize() {
+	public int getEncodedSize() {
 		return 10;
 	}
 
@@ -80,13 +83,10 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#Encode(org.ecsoya.iec60870.
-	 * Frame, org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
+	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#getType()
 	 */
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.appendBytes(this.timestamp.getEncodedValue());
+	public TypeID getType() {
+		return TypeID.C_SE_TB_1;
 	}
 }

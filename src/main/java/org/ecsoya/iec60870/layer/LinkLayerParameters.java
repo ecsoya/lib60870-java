@@ -9,6 +9,34 @@ public class LinkLayerParameters {
 	private long timeoutRepeat = 1000; /* timeout for repeating messages when no ACK received in ms */
 	private boolean useSingleCharACK = true; /* use single char ACK for ACK (FC=0) or RESP_NO_USER_DATA (FC=9) */
 
+	/**
+	 * @return the addressLength
+	 */
+	public int getAddressLength() {
+		return addressLength;
+	}
+
+	/**
+	 * @return the timeoutForACK
+	 */
+	public int getTimeoutForACK() {
+		return timeoutForACK;
+	}
+
+	/**
+	 * @return the timeoutRepeat
+	 */
+	public long getTimeoutRepeat() {
+		return timeoutRepeat;
+	}
+
+	/**
+	 * @return the useSingleCharACK
+	 */
+	public boolean isUseSingleCharACK() {
+		return useSingleCharACK;
+	}
+
 	/// <summary>
 	/// Gets or sets the length of the link layer address field
 	/// </summary>
@@ -22,13 +50,6 @@ public class LinkLayerParameters {
 		this.addressLength = addressLength;
 	}
 
-	/**
-	 * @return the addressLength
-	 */
-	public int getAddressLength() {
-		return addressLength;
-	}
-
 	/// <summary>
 	/// Gets or sets the timeout for message ACK
 	/// </summary>
@@ -38,13 +59,6 @@ public class LinkLayerParameters {
 	 */
 	public void setTimeoutForACK(int timeoutForACK) {
 		this.timeoutForACK = timeoutForACK;
-	}
-
-	/**
-	 * @return the timeoutForACK
-	 */
-	public int getTimeoutForACK() {
-		return timeoutForACK;
 	}
 
 	/// <summary>
@@ -59,13 +73,6 @@ public class LinkLayerParameters {
 		this.timeoutRepeat = timeoutRepeat;
 	}
 
-	/**
-	 * @return the timeoutRepeat
-	 */
-	public long getTimeoutRepeat() {
-		return timeoutRepeat;
-	}
-
 	/// <summary>
 	/// Gets or sets a value indicating whether the secondary link layer uses single
 	/// character ACK instead of FC 0 or FC 9
@@ -76,12 +83,5 @@ public class LinkLayerParameters {
 	 */
 	public void setUseSingleCharACK(boolean useSingleCharACK) {
 		this.useSingleCharACK = useSingleCharACK;
-	}
-
-	/**
-	 * @return the useSingleCharACK
-	 */
-	public boolean isUseSingleCharACK() {
-		return useSingleCharACK;
 	}
 }

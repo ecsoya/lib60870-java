@@ -34,56 +34,14 @@ import org.ecsoya.iec60870.asdu.ie.value.StartEvent;
  */
 
 public class PackedStartEventsOfProtectionEquipment extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 7;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_EP_TB_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private StartEvent spe;
-
-	public final StartEvent getSPE() {
-		return spe;
-	}
 
 	private QualityDescriptorP qdp;
 
-	public final QualityDescriptorP getQDP() {
-		return qdp;
-	}
-
 	private CP16Time2a elapsedTime;
-
-	public final CP16Time2a getElapsedTime() {
-		return this.elapsedTime;
-	}
 
 	private CP24Time2a timestamp;
 
-	public final CP24Time2a getTimestamp() {
-		return this.timestamp;
-	}
-
-	public PackedStartEventsOfProtectionEquipment(int objectAddress, StartEvent spe, QualityDescriptorP qdp,
-			CP16Time2a elapsedTime, CP24Time2a timestamp) {
-		super(objectAddress);
-		this.spe = spe;
-		this.qdp = qdp;
-		this.elapsedTime = elapsedTime;
-		this.timestamp = timestamp;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal PackedStartEventsOfProtectionEquipment(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public PackedStartEventsOfProtectionEquipment(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -91,7 +49,7 @@ public class PackedStartEventsOfProtectionEquipment extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -105,9 +63,18 @@ public class PackedStartEventsOfProtectionEquipment extends InformationObject {
 		timestamp = new CP24Time2a(msg, startIndex);
 	}
 
+	public PackedStartEventsOfProtectionEquipment(int objectAddress, StartEvent spe, QualityDescriptorP qdp,
+			CP16Time2a elapsedTime, CP24Time2a timestamp) {
+		super(objectAddress);
+		this.spe = spe;
+		this.qdp = qdp;
+		this.elapsedTime = elapsedTime;
+		this.timestamp = timestamp;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.setNextByte(spe.getEncodedValue());
 
@@ -116,5 +83,36 @@ public class PackedStartEventsOfProtectionEquipment extends InformationObject {
 		frame.appendBytes(elapsedTime.getEncodedValue());
 
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	public final CP16Time2a getElapsedTime() {
+		return this.elapsedTime;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 7;
+	}
+
+	public final QualityDescriptorP getQDP() {
+		return qdp;
+	}
+
+	public final StartEvent getSPE() {
+		return spe;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	public final CP24Time2a getTimestamp() {
+		return this.timestamp;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_EP_TB_1;
 	}
 }

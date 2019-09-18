@@ -69,8 +69,11 @@ public enum CauseOfTransmission {
 
 	public static final int SIZE = java.lang.Integer.SIZE;
 
-	private int intValue;
 	private static java.util.HashMap<Integer, CauseOfTransmission> mappings;
+
+	public static CauseOfTransmission forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, CauseOfTransmission> getMappings() {
 		if (mappings == null) {
@@ -83,6 +86,8 @@ public enum CauseOfTransmission {
 		return mappings;
 	}
 
+	private int intValue;
+
 	private CauseOfTransmission(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -90,9 +95,5 @@ public enum CauseOfTransmission {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static CauseOfTransmission forValue(int value) {
-		return getMappings().get(value);
 	}
 }

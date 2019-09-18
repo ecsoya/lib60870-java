@@ -9,49 +9,12 @@ import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.TypeID;
 
 public class EventOfProtectionEquipmentWithCP56Time2a extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 10;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_EP_TD_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private SingleEvent singleEvent;
-
-	public final SingleEvent getEvent() {
-		return singleEvent;
-	}
 
 	private CP16Time2a elapsedTime;
 
-	public final CP16Time2a getElapsedTime() {
-		return this.elapsedTime;
-	}
-
 	private CP56Time2a timestamp;
 
-	public final CP56Time2a getTimestamp() {
-		return this.timestamp;
-	}
-
-	public EventOfProtectionEquipmentWithCP56Time2a(int ioa, SingleEvent singleEvent, CP16Time2a elapsedTime,
-			CP56Time2a timestamp) {
-		super(ioa);
-		this.singleEvent = singleEvent;
-		this.elapsedTime = elapsedTime;
-		this.timestamp = timestamp;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal EventOfProtectionEquipmentWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSequence)
 	public EventOfProtectionEquipmentWithCP56Time2a(ApplicationLayerParameters parameters, byte[] msg, int startIndex,
 			boolean isSequence) throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
@@ -59,7 +22,7 @@ public class EventOfProtectionEquipmentWithCP56Time2a extends InformationObject 
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -72,14 +35,49 @@ public class EventOfProtectionEquipmentWithCP56Time2a extends InformationObject 
 		timestamp = new CP56Time2a(msg, startIndex);
 	}
 
+	public EventOfProtectionEquipmentWithCP56Time2a(int ioa, SingleEvent singleEvent, CP16Time2a elapsedTime,
+			CP56Time2a timestamp) {
+		super(ioa);
+		this.singleEvent = singleEvent;
+		this.elapsedTime = elapsedTime;
+		this.timestamp = timestamp;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		frame.setNextByte(singleEvent.getEncodedValue());
 
 		frame.appendBytes(elapsedTime.getEncodedValue());
 
 		frame.appendBytes(timestamp.getEncodedValue());
+	}
+
+	public final CP16Time2a getElapsedTime() {
+		return this.elapsedTime;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 10;
+	}
+
+	public final SingleEvent getEvent() {
+		return singleEvent;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	public final CP56Time2a getTimestamp() {
+		return this.timestamp;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_EP_TD_1;
 	}
 }

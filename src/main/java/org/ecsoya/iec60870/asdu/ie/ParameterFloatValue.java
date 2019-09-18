@@ -24,7 +24,7 @@ public class ParameterFloatValue extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		/* parse float value */
@@ -42,7 +42,17 @@ public class ParameterFloatValue extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		byte[] floatEncoded = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putFloat(value).array();
+
+		frame.appendBytes(floatEncoded);
+
+		frame.setNextByte(qpm);
+	}
+
+	@Override
+	public int getEncodedSize() {
 		return 5;
 	}
 
@@ -54,15 +64,5 @@ public class ParameterFloatValue extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.P_ME_NC_1;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		byte[] floatEncoded = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putFloat(value).array();
-
-		frame.appendBytes(floatEncoded);
-
-		frame.setNextByte(qpm);
 	}
 }

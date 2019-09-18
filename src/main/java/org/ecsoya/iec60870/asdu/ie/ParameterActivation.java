@@ -29,7 +29,7 @@ public class ParameterActivation extends InformationObject {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		/* parse QPA */
@@ -42,7 +42,13 @@ public class ParameterActivation extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte(qpa);
+	}
+
+	@Override
+	public int getEncodedSize() {
 		return 1;
 	}
 
@@ -54,12 +60,6 @@ public class ParameterActivation extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.P_AC_NA_1;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte(qpa);
 	}
 
 }

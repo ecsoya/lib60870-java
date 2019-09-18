@@ -12,18 +12,18 @@ package org.ecsoya.iec60870.asdu.ie.value;
  * 7.2.6.11
  */
 public class StartEvent {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: private byte encodedValue;
 	private byte encodedValue;
 
 	public StartEvent() {
 		this.encodedValue = 0;
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public StartEvent(byte encodedValue)
 	public StartEvent(byte encodedValue) {
 		this.encodedValue = encodedValue;
+	}
+
+	public final byte getEncodedValue() {
+		return this.encodedValue;
 	}
 
 	/**
@@ -39,74 +39,19 @@ public class StartEvent {
 		}
 	}
 
-	public final void setGS(boolean value) {
-		if (value) {
-			encodedValue |= 0x01;
-		} else {
-			encodedValue &= 0xfe;
-		}
-	}
-
-	/**
-	 * Start of operation phase L1
-	 * 
-	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getSL1() {
-		if ((encodedValue & 0x02) != 0) {
+	public final boolean getRES1() {
+		if ((encodedValue & 0x40) != 0) {
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	public final void setSL1(boolean value) {
-		if (value) {
-			encodedValue |= 0x02;
-		} else {
-			encodedValue &= 0xfd;
-		}
-	}
-
-	/**
-	 * Start of operation phase L2
-	 * 
-	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getSL2() {
-		if ((encodedValue & 0x04) != 0) {
+	public final boolean getRES2() {
+		if ((encodedValue & 0x80) != 0) {
 			return true;
 		} else {
 			return false;
-		}
-	}
-
-	public final void setSL2(boolean value) {
-		if (value) {
-			encodedValue |= 0x04;
-		} else {
-			encodedValue &= 0xfb;
-		}
-	}
-
-	/**
-	 * Start of operation phase L3
-	 * 
-	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
-	 */
-	public final boolean getSL3() {
-		if ((encodedValue & 0x08) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final void setSL3(boolean value) {
-		if (value) {
-			encodedValue |= 0x08;
-		} else {
-			encodedValue &= 0xf7;
 		}
 	}
 
@@ -123,11 +68,42 @@ public class StartEvent {
 		}
 	}
 
-	public final void setSIE(boolean value) {
-		if (value) {
-			encodedValue |= 0x10;
+	/**
+	 * Start of operation phase L1
+	 * 
+	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getSL1() {
+		if ((encodedValue & 0x02) != 0) {
+			return true;
 		} else {
-			encodedValue &= 0xef;
+			return false;
+		}
+	}
+
+	/**
+	 * Start of operation phase L2
+	 * 
+	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getSL2() {
+		if ((encodedValue & 0x04) != 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Start of operation phase L3
+	 * 
+	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
+	 */
+	public final boolean getSL3() {
+		if ((encodedValue & 0x08) != 0) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 
@@ -144,19 +120,15 @@ public class StartEvent {
 		}
 	}
 
-	public final void setSRD(boolean value) {
-		if (value) {
-			encodedValue |= 0x20;
-		} else {
-			encodedValue &= 0xdf;
-		}
+	public final void setEncodedValue(byte value) {
+		encodedValue = value;
 	}
 
-	public final boolean getRES1() {
-		if ((encodedValue & 0x40) != 0) {
-			return true;
+	public final void setGS(boolean value) {
+		if (value) {
+			encodedValue |= 0x01;
 		} else {
-			return false;
+			encodedValue &= 0xfe;
 		}
 	}
 
@@ -168,14 +140,6 @@ public class StartEvent {
 		}
 	}
 
-	public final boolean getRES2() {
-		if ((encodedValue & 0x80) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
 	public final void setRES2(boolean value) {
 		if (value) {
 			encodedValue |= 0x80;
@@ -184,16 +148,44 @@ public class StartEvent {
 		}
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public byte getEncodedValue()
-	public final byte getEncodedValue() {
-		return this.encodedValue;
+	public final void setSIE(boolean value) {
+		if (value) {
+			encodedValue |= 0x10;
+		} else {
+			encodedValue &= 0xef;
+		}
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: public void setEncodedValue(byte value)
-	public final void setEncodedValue(byte value) {
-		encodedValue = value;
+	public final void setSL1(boolean value) {
+		if (value) {
+			encodedValue |= 0x02;
+		} else {
+			encodedValue &= 0xfd;
+		}
+	}
+
+	public final void setSL2(boolean value) {
+		if (value) {
+			encodedValue |= 0x04;
+		} else {
+			encodedValue &= 0xfb;
+		}
+	}
+
+	public final void setSL3(boolean value) {
+		if (value) {
+			encodedValue |= 0x08;
+		} else {
+			encodedValue &= 0xf7;
+		}
+	}
+
+	public final void setSRD(boolean value) {
+		if (value) {
+			encodedValue |= 0x20;
+		} else {
+			encodedValue &= 0xdf;
+		}
 	}
 
 	@Override

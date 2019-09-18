@@ -34,36 +34,24 @@ public class ApplicationLayerParameters implements Cloneable {
 		return copy;
 	}
 
-	public final int getSizeOfCOT() {
-		return this.sizeOfCOT;
-	}
-
-	public final void setSizeOfCOT(int value) {
-		sizeOfCOT = value;
+	public final int getMaxAsduLength() {
+		return this.maxAsduLength;
 	}
 
 	public final int getOA() {
 		return this.originatorAddress;
 	}
 
-	public final void setOA(int value) {
-		originatorAddress = value;
-	}
-
 	public final int getSizeOfCA() {
 		return this.sizeOfCA;
 	}
 
-	public final void setSizeOfCA(int value) {
-		sizeOfCA = value;
+	public final int getSizeOfCOT() {
+		return this.sizeOfCOT;
 	}
 
 	public final int getSizeOfIOA() {
 		return this.sizeOfIOA;
-	}
-
-	public final void setSizeOfIOA(int value) {
-		sizeOfIOA = value;
 	}
 
 	public final int getSizeOfTypeId() {
@@ -74,11 +62,23 @@ public class ApplicationLayerParameters implements Cloneable {
 		return this.sizeOfVSQ;
 	}
 
-	public final int getMaxAsduLength() {
-		return this.maxAsduLength;
-	}
-
 	public final void setMaxAsduLength(int value) {
 		maxAsduLength = value;
+	}
+
+	public final void setOA(int value) {
+		originatorAddress = value;
+	}
+
+	public final void setSizeOfCA(int value) {
+		sizeOfCA = value;
+	}
+
+	public final void setSizeOfCOT(int value) {
+		sizeOfCOT = value;
+	}
+
+	public final void setSizeOfIOA(int value) {
+		sizeOfIOA = value;
 	}
 }

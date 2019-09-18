@@ -57,23 +57,35 @@ import tangible.OutObject;
  * Represents a client (master) connection
  */
 public class ClientConnection implements IMasterConnection {
-	private static int connectionsCounter = 0;
+	/* data structure for k-size sent ASDU buffer */
+	private final static class SentASDU {
+		// required to identify message in server (low-priority) queue
+		public long entryTime;
+		public int queueIndex; // -1 if ASDU is not from low-priority queue
 
-	private int connectionID;
+		public long sentTime; // timestamp when the message was sent (for T1 timeout)
+		public int seqNo; // sequence number used to send the message
 
-	private void DebugLog(String msg) {
-		if (debugOutput) {
-			System.out.print("CS104 SLAVE CONNECTION ");
-			System.out.print(connectionID);
-			System.out.print(": ");
-			System.out.println(msg);
+		public SentASDU clone() {
+			SentASDU varCopy = new SentASDU();
+
+			varCopy.entryTime = this.entryTime;
+			varCopy.queueIndex = this.queueIndex;
+			varCopy.sentTime = this.sentTime;
+			varCopy.seqNo = this.seqNo;
+
+			return varCopy;
 		}
 	}
 
+	private static int connectionsCounter = 0;
+
 	private static byte[] STARTDT_CON_MSG = new byte[] { 0x68, 0x04, 0x0b, 0x00, 0x00, 0x00 };
+
 	private static byte[] STOPDT_CON_MSG = new byte[] { 0x68, 0x04, 0x23, 0x00, 0x00, 0x00 };
 	private static byte[] TESTFR_CON_MSG = new byte[] { 0x68, 0x04, (byte) 0x83, 0x00, 0x00, 0x00 };
 	private static byte[] TESTFR_ACT_MSG = new byte[] { 0x68, 0x04, 0x43, 0x00, 0x00, 0x00 };
+	private int connectionID;
 
 	private int sendCount = 0;
 	private int receiveCount = 0;
@@ -101,86 +113,33 @@ public class ClientConnection implements IMasterConnection {
 
 	private LinkedList<BufferFrame> waitingASDUsHighPrio = null;
 
-	/* data structure for k-size sent ASDU buffer */
-	private final static class SentASDU {
-		// required to identify message in server (low-priority) queue
-		public long entryTime;
-		public int queueIndex; // -1 if ASDU is not from low-priority queue
-
-		public long sentTime; // timestamp when the message was sent (for T1 timeout)
-		public int seqNo; // sequence number used to send the message
-
-		public SentASDU clone() {
-			SentASDU varCopy = new SentASDU();
-
-			varCopy.entryTime = this.entryTime;
-			varCopy.queueIndex = this.queueIndex;
-			varCopy.sentTime = this.sentTime;
-			varCopy.seqNo = this.seqNo;
-
-			return varCopy;
-		}
-	}
-
 	private int maxSentASDUs;
+
 	private int oldestSentASDU = -1;
 	private int newestSentASDU = -1;
 	private SentASDU[] sentASDUs = null;
-
 	// only available if the server has multiple redundancy groups
 	private ASDUQueue asduQueue = null;
 
 	private FileServer fileServer;
 
-	public final ASDUQueue GetASDUQueue() {
-		return asduQueue;
-	}
-
-	private void ProcessASDUs() {
-		callbackThreadRunning = true;
-
-		while (callbackThreadRunning) {
-
-			while ((receivedASDUs.size() > 0) && (callbackThreadRunning) && (running)) {
-
-				ASDU asdu = receivedASDUs.poll();
-
-//				tangible.OutObject<ASDU> tempOut_asdu = new tangible.OutObject<ASDU>();
-//				if (receivedASDUs.TryDequeue(tempOut_asdu)) {
-//					asdu = tempOut_asdu.argValue;
-				try {
-					HandleASDU(asdu);
-				} catch (ASDUParsingException e) {
-
-					e.printStackTrace();
-				}
-//				} else {
-//					asdu = tempOut_asdu.argValue;
-//				}
-
-			}
-
-			try {
-				Thread.sleep(50);
-			} catch (InterruptedException e) {
-
-				e.printStackTrace();
-			}
-		}
-
-		DebugLog("ProcessASDUs exit thread");
-	}
-
 	private SocketAddress remoteEndpoint;
 
 	/**
-	 * Gets the remote endpoint (client IP address and TCP port)
-	 * 
-	 * <value>The remote IP endpoint</value>
+	 * Flag indicating that this connection is the active connection. The active
+	 * connection is the only connection that is answering application layer
+	 * requests and sends cyclic, and spontaneous messages.
 	 */
-	public final SocketAddress getRemoteEndpoint() {
-		return remoteEndpoint;
-	}
+	private boolean active = false;
+
+	private Socket socket;
+
+	// private NetworkStream socketStream;
+	private OutputStream socketStream;
+
+	private boolean running = false;
+
+	private boolean debugOutput = true;
 
 	public ClientConnection(Socket socket, TlsSecurityInformation tlsSecInfo, APCIParameters apciParameters,
 			ApplicationLayerParameters parameters, Server server, ASDUQueue asduQueue, boolean debugOutput) {
@@ -212,7 +171,7 @@ public class ClientConnection implements IMasterConnection {
 		this.socket = socket;
 		this.tlsSecInfo = tlsSecInfo;
 
-		this.fileServer = new FileServer(this, server.GetAvailableFiles(), (String message) -> DebugLog(message));
+		this.fileServer = new FileServer(this, server.getAvailableFiles(), (String message) -> DebugLog(message));
 
 		Thread workerThread = new Thread() {
 			public void run() {
@@ -223,338 +182,140 @@ public class ClientConnection implements IMasterConnection {
 		workerThread.start();
 	}
 
-	/**
-	 * Gets the connection parameters.
-	 * 
-	 * @return The connection parameters used by the server.
-	 */
-	public final ApplicationLayerParameters GetApplicationLayerParameters() {
-		return alParameters;
-	}
+	private boolean AreByteArraysEqual(byte[] array1, byte[] array2) {
+		if (array1.length == array2.length) {
 
-	private void ResetT3Timeout() {
-		nextT3Timeout = (long) System.currentTimeMillis() + (long) (apciParameters.getT3() * 1000);
-	}
-
-	/**
-	 * Flag indicating that this connection is the active connection. The active
-	 * connection is the only connection that is answering application layer
-	 * requests and sends cyclic, and spontaneous messages.
-	 */
-	private boolean active = false;
-
-	public boolean isActive() {
-		return active;
-	}
-
-	public void setActive(boolean value) {
-		if (active != value) {
-
-			active = value;
-
-			if (active)
-				DebugLog("is active");
-			else
-				DebugLog("is not active");
-		}
-	}
-
-	private Socket socket;
-//private NetworkStream socketStream;
-	private OutputStream socketStream;
-
-	private boolean running = false;
-
-	private boolean debugOutput = true;
-
-	private int receiveMessage(byte[] buffer) throws IOException {
-
-		int readLength = 0;
-
-//		if (socket.Poll(50, SelectMode.SelectRead)) {
-//			// maybe use socketStream.DataAvailable
-//
-//			// wait for first byte
-//			if (socketStream.Read(buffer, 0, 1) != 1)
-//				return -1;
-//
-//			if (buffer[0] != 0x68) {
-//				DebugLog("Missing SOF indicator!");
-//				return -1;
-//			}
-//
-//			// read length byte
-//			if (socketStream.Read(buffer, 1, 1) != 1)
-//				return -1;
-//
-//			int length = buffer[1];
-//
-//			// read remaining frame
-//			if (socketStream.Read(buffer, 2, length) != length) {
-//				DebugLog("Failed to read complete frame!");
-//				return -1;
-//			}
-//
-//			readLength = length + 2;
-//		}
-//		
-		if (socket != null && socket.isConnected()) {
-			InputStream is = socket.getInputStream();
-			// wait for first byte
-			if (is.read(buffer, 0, 1) != 1)
-				return -1;
-
-			if (buffer[0] != 0x68) {
-				DebugLog("Missing SOF indicator!");
-
-				return -1;
+			for (int i = 0; i < array1.length; i++) {
+				if (array1[i] != array2[i])
+					return false;
 			}
 
-			// read length byte
-			if (is.read(buffer, 1, 1) != 1)
-				return -1;
-
-			int length = buffer[1];
-
-			// read remaining frame
-			if (is.read(buffer, 2, length) != length) {
-				DebugLog("Failed to read complete frame!");
-
-				return -1;
-			}
-
-			readLength = length + 2;
-		}
-
-		return readLength;
-	}
-
-	private void SendSMessage() {
-		DebugLog("Send S message");
-
-		byte[] msg = new byte[6];
-
-		msg[0] = 0x68;
-		msg[1] = 0x04;
-		msg[2] = 0x01;
-		msg[3] = 0;
-
-		synchronized (socketStream) {
-			msg[4] = (byte) ((receiveCount % 128) * 2);
-			msg[5] = (byte) (receiveCount / 128);
-
-			try {
-				socketStream.write(msg, 0, msg.length);
-			} catch (IOException e) {
-				// socket error --> close connection
-				running = false;
-			}
-		}
-	}
-
-	private int SendIMessage(BufferFrame asdu) {
-
-		byte[] buffer = asdu.getBuffer();
-
-		int msgSize = asdu.getMsgSize(); /* ASDU size + ACPI size */
-
-		buffer[0] = 0x68;
-
-		/* set size field */
-		buffer[1] = (byte) (msgSize - 2);
-
-		buffer[2] = (byte) ((sendCount % 128) * 2);
-		buffer[3] = (byte) (sendCount / 128);
-
-		buffer[4] = (byte) ((receiveCount % 128) * 2);
-		buffer[5] = (byte) (receiveCount / 128);
-
-		try {
-			synchronized (socketStream) {
-				socketStream.write(buffer, 0, msgSize);
-//				DebugLog("SEND I (size = " + msgSize + ") : " + BitConverter.ToString(buffer, 0, msgSize));
-				sendCount = (sendCount + 1) % 32768;
-				unconfirmedReceivedIMessages = 0;
-				timeoutT2Triggered = false;
-			}
-		} catch (IOException e) {
-			// socket error --> close connection
-			running = false;
-		}
-
-		return sendCount;
-	}
-
-	private boolean isSentBufferFull() {
-
-		if (oldestSentASDU == -1)
-			return false;
-
-		int newIndex = (newestSentASDU + 1) % maxSentASDUs;
-
-		if (newIndex == oldestSentASDU)
 			return true;
-		else
+		} else
 			return false;
 	}
 
-	private void PrintSendBuffer() {
-
-		if (oldestSentASDU != -1) {
-
-			int currentIndex = oldestSentASDU;
-
-			int nextIndex = 0;
-
-			DebugLog("------k-buffer------");
-
-			do {
-				DebugLog(currentIndex + " : S " + sentASDUs[currentIndex].seqNo + " : time "
-						+ sentASDUs[currentIndex].sentTime + " : " + sentASDUs[currentIndex].queueIndex);
-
-				if (currentIndex == newestSentASDU)
-					nextIndex = -1;
-				else
-					currentIndex = (currentIndex + 1) % maxSentASDUs;
-
-			} while (nextIndex != -1);
-
-			DebugLog("--------------------");
-
-		}
-
+	public void ASDUReadyToSend() {
+		if (isActive())
+			SendWaitingASDUs();
 	}
 
-	private void sendNextAvailableASDU() {
+	private boolean CheckSequenceNumber(int seqNo) {
+
 		synchronized (sentASDUs) {
-			if (isSentBufferFull())
-				return;
 
-			OutObject<Long> timestamp = new OutObject<>();
-			OutObject<Integer> index = new OutObject<>();
+			/* check if received sequence number is valid */
 
-			asduQueue.LockASDUQueue();
-			BufferFrame asdu = asduQueue.GetNextWaitingASDU(timestamp, index);
+			boolean seqNoIsValid = false;
+			boolean counterOverflowDetected = false;
 
-			try {
+			if (oldestSentASDU == -1) { /* if k-Buffer is empty */
 
-				if (asdu != null) {
-
-					int currentIndex = 0;
-
-					if (oldestSentASDU == -1) {
-						oldestSentASDU = 0;
-						newestSentASDU = 0;
-
-					} else {
-						currentIndex = (newestSentASDU + 1) % maxSentASDUs;
-					}
-
-					sentASDUs[currentIndex].entryTime = timestamp.argValue;
-					sentASDUs[currentIndex].queueIndex = index.argValue;
-					sentASDUs[currentIndex].seqNo = SendIMessage(asdu);
-					sentASDUs[currentIndex].sentTime = System.currentTimeMillis();
-
-					newestSentASDU = currentIndex;
-
-					PrintSendBuffer();
-				}
-			} finally {
-				asduQueue.UnlockASDUQueue();
-			}
-		}
-	}
-
-	private boolean sendNextHighPriorityASDU() {
-		synchronized (sentASDUs) {
-			if (isSentBufferFull())
-				return false;
-
-			BufferFrame asdu = waitingASDUsHighPrio.pop();
-
-			if (asdu != null) {
-
-				int currentIndex = 0;
-
-				if (oldestSentASDU == -1) {
-					oldestSentASDU = 0;
-					newestSentASDU = 0;
+				if (seqNo == sendCount)
+					seqNoIsValid = true;
+			} else {
+				// Two cases are required to reflect sequence number overflow
+				if (sentASDUs[oldestSentASDU].seqNo <= sentASDUs[newestSentASDU].seqNo) {
+					if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) && (seqNo <= sentASDUs[newestSentASDU].seqNo))
+						seqNoIsValid = true;
 
 				} else {
-					currentIndex = (newestSentASDU + 1) % maxSentASDUs;
+					if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) || (seqNo <= sentASDUs[newestSentASDU].seqNo))
+						seqNoIsValid = true;
+
+					counterOverflowDetected = true;
 				}
 
-				sentASDUs[currentIndex].queueIndex = -1;
-				sentASDUs[currentIndex].seqNo = SendIMessage(asdu);
-				sentASDUs[currentIndex].sentTime = System.currentTimeMillis();
+				int latestValidSeqNo = (sentASDUs[oldestSentASDU].seqNo - 1) % 32768;
 
-				newestSentASDU = currentIndex;
+				if (latestValidSeqNo == seqNo)
+					seqNoIsValid = true;
+			}
 
-				PrintSendBuffer();
-			} else
+			if (seqNoIsValid == false) {
+				DebugLog("Received sequence number out of range");
 				return false;
+			}
+
+			if (oldestSentASDU != -1) {
+
+				do {
+					if (counterOverflowDetected == false) {
+						if (seqNo < sentASDUs[oldestSentASDU].seqNo) {
+							break;
+						}
+					} else {
+						if (seqNo == ((sentASDUs[oldestSentASDU].seqNo - 1) % 32768)) {
+							break;
+						}
+					}
+
+					/* remove from server (low-priority) queue if required */
+					if (sentASDUs[oldestSentASDU].queueIndex != -1) {
+						server.MarkASDUAsConfirmed(sentASDUs[oldestSentASDU].queueIndex,
+								sentASDUs[oldestSentASDU].entryTime);
+					}
+
+					oldestSentASDU = (oldestSentASDU + 1) % maxSentASDUs;
+
+					int checkIndex = (newestSentASDU + 1) % maxSentASDUs;
+
+					if (oldestSentASDU == checkIndex) {
+						oldestSentASDU = -1;
+						break;
+					}
+
+					if (sentASDUs[oldestSentASDU].seqNo == seqNo) {
+						/* we arrived at the seq# that has been confirmed */
+
+						if (oldestSentASDU == newestSentASDU)
+							oldestSentASDU = -1;
+						else
+							oldestSentASDU = (oldestSentASDU + 1) % maxSentASDUs;
+
+						break;
+					}
+
+				} while (true);
+			}
 		}
 
 		return true;
 	}
 
-	private void SendWaitingASDUs() {
-
-		synchronized (waitingASDUsHighPrio) {
-
-			while (waitingASDUsHighPrio.size() > 0) {
-
-				if (sendNextHighPriorityASDU() == false)
-					return;
-
-				if (running == false)
-					return;
-			}
-		}
-
-		// send messages from low-priority queue
-		sendNextAvailableASDU();
+	public void Close() {
+		running = false;
 	}
 
-	private void SendASDUInternal(ASDU asdu) {
-		if (isActive()) {
-			synchronized (waitingASDUsHighPrio) {
-
-				BufferFrame frame = new BufferFrame(new byte[256], 6);
-
-				asdu.encode(frame, alParameters);
-
-				waitingASDUsHighPrio.push(frame);
-			}
-
-			SendWaitingASDUs();
+	private void DebugLog(String msg) {
+		if (debugOutput) {
+			System.out.print("CS104 SLAVE CONNECTION ");
+			System.out.print(connectionID);
+			System.out.print(": ");
+			System.out.println(msg);
 		}
 	}
 
-/// <summary>
-/// Send a response ASDU over this connection
-/// </summary>
-/// <exception cref="ConnectionException">Throws an exception if the connection is no longer active (e.g. because it has been closed by the other side).</exception>
-/// <param name="asdu">The ASDU to send</param>
-	public void SendASDU(ASDU asdu) {
-		if (isActive())
-			SendASDUInternal(asdu);
-//		else
-//			throw new ConnectionException("Connection not active");
+	/**
+	 * Gets the connection parameters.
+	 * 
+	 * @return The connection parameters used by the server.
+	 */
+	public final ApplicationLayerParameters getApplicationLayerParameters() {
+		return alParameters;
 	}
 
-	public void SendACT_CON(ASDU asdu, boolean negative) {
-		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
-		asdu.setNegative(negative);
-
-		SendASDU(asdu);
+	public final ASDUQueue GetASDUQueue() {
+		return asduQueue;
 	}
 
-	public void SendACT_TERM(ASDU asdu) {
-		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_TERMINATION);
-		asdu.setNegative(false);
-
-		SendASDU(asdu);
+	/**
+	 * Gets the remote endpoint (client IP address and TCP port)
+	 * 
+	 * <value>The remote IP endpoint</value>
+	 */
+	public final SocketAddress getRemoteEndpoint() {
+		return remoteEndpoint;
 	}
 
 	private void HandleASDU(ASDU asdu) throws ASDUParsingException {
@@ -596,7 +357,7 @@ public class ClientConnection implements IMasterConnection {
 					CounterInterrogationCommand cic = (CounterInterrogationCommand) asdu.getElement(0);
 
 					if (server.counterInterrogationHandler.invoke(server.counterInterrogationHandlerParameter, this,
-							asdu, cic.getQCC()))
+							asdu, cic.getQualifier()))
 						messageHandled = true;
 				}
 			} else {
@@ -714,7 +475,7 @@ public class ClientConnection implements IMasterConnection {
 
 		if (messageHandled == false)
 			try {
-				messageHandled = fileServer.HandleFileAsdu(asdu);
+				messageHandled = fileServer.handleFileAsdu(asdu);
 			} catch (ASDUParsingException e) {
 				messageHandled = false;
 				e.printStackTrace();
@@ -731,87 +492,147 @@ public class ClientConnection implements IMasterConnection {
 
 	}
 
-	private boolean CheckSequenceNumber(int seqNo) {
+	private void HandleConnection() {
 
-		synchronized (sentASDUs) {
+		byte[] bytes = new byte[300];
 
-			/* check if received sequence number is valid */
+		try {
 
-			boolean seqNoIsValid = false;
-			boolean counterOverflowDetected = false;
+			try {
 
-			if (oldestSentASDU == -1) { /* if k-Buffer is empty */
+				running = true;
 
-				if (seqNo == sendCount)
-					seqNoIsValid = true;
-			} else {
-				// Two cases are required to reflect sequence number overflow
-				if (sentASDUs[oldestSentASDU].seqNo <= sentASDUs[newestSentASDU].seqNo) {
-					if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) && (seqNo <= sentASDUs[newestSentASDU].seqNo))
-						seqNoIsValid = true;
+//				if (tlsSecInfo != null) {
+//
+//					DebugLog("Setup TLS");
+//
+//					SslStream sslStream = new SslStream(socketStream, true, RemoteCertificateValidationCallback);
+//
+//					boolean authenticationSuccess = false;
+//
+//					try {
+//						sslStream.AuthenticateAsServer(tlsSecInfo.OwnCertificate, true,
+//								System.Security.Authentication.SslProtocols.Tls, false);
+//
+//						if (sslStream.IsAuthenticated == true) {
+//							socketStream = sslStream;
+//							authenticationSuccess = true;
+//						}
+//
+//					} catch (IOException e) {
+//
+//						if (e.GetBaseException() != null) {
+//							DebugLog("TLS authentication error: " + e.GetBaseException().Message);
+//						} else {
+//							DebugLog("TLS authentication error: " + e.Message);
+//						}
+//
+//					}
+//
+//					if (authenticationSuccess == true)
+//						socketStream = sslStream;
+//					else {
+//						DebugLog("TLS authentication failed");
+//						running = false;
+//					}
+//				}
 
-				} else {
-					if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) || (seqNo <= sentASDUs[newestSentASDU].seqNo))
-						seqNoIsValid = true;
+				if (running) {
 
-					counterOverflowDetected = true;
+//					socketStream.ReadTimeout = 50;
+
+					callbackThread = new Thread(() -> ProcessASDUs());
+					callbackThread.start();
+
+					ResetT3Timeout();
 				}
 
-				int latestValidSeqNo = (sentASDUs[oldestSentASDU].seqNo - 1) % 32768;
+				while (running) {
 
-				if (latestValidSeqNo == seqNo)
-					seqNoIsValid = true;
+					try {
+						// Receive the response from the remote device.
+						int bytesRec = receiveMessage(bytes);
+
+						if (bytesRec > 0) {
+
+//							DebugLog("RCVD: " + BitConverter.ToString(bytes, 0, bytesRec));
+
+							if (HandleMessage(bytes, bytesRec) == false) {
+								/* close connection on error */
+								running = false;
+							}
+
+							if (unconfirmedReceivedIMessages >= apciParameters.getW()) {
+								lastConfirmationTime = System.currentTimeMillis();
+								unconfirmedReceivedIMessages = 0;
+								timeoutT2Triggered = false;
+								SendSMessage();
+							}
+						} else if (bytesRec == -1) {
+							running = false;
+						}
+					} catch (IOException e) {
+						running = false;
+					}
+
+					if (fileServer != null)
+						fileServer.handleFileTransmission();
+
+					if (handleTimeouts() == false)
+						running = false;
+
+					if (running) {
+						if (isActive())
+							SendWaitingASDUs();
+
+						Thread.sleep(1);
+					}
+				}
+
+				setActive(false);
+
+				DebugLog("CLOSE CONNECTION!");
+
+				// Release the socket.
+
+				socket.shutdownInput();
+				socket.shutdownOutput();
+				socket.close();
+
+				socketStream.close();
+				socket.close();
+
+				DebugLog("CONNECTION CLOSED!");
+
+//			} catch (ArgumentNullException ane) {
+//				DebugLog("ArgumentNullException : " + ane.ToString());
+			} catch (SocketException se) {
+				DebugLog("SocketException : " + se.getMessage());
+			} catch (Exception e) {
+				DebugLog("Unexpected exception : " + e.getMessage());
 			}
 
-			if (seqNoIsValid == false) {
-				DebugLog("Received sequence number out of range");
-				return false;
-			}
+		} catch (Exception e) {
+			DebugLog(e.getMessage());
+		}
 
-			if (oldestSentASDU != -1) {
+		// unmark unconfirmed messages in server queue if k-buffer not empty
+		if (oldestSentASDU != -1)
+			server.UnmarkAllASDUs();
 
-				do {
-					if (counterOverflowDetected == false) {
-						if (seqNo < sentASDUs[oldestSentASDU].seqNo) {
-							break;
-						}
-					} else {
-						if (seqNo == ((sentASDUs[oldestSentASDU].seqNo - 1) % 32768)) {
-							break;
-						}
-					}
+		server.Remove(this);
 
-					/* remove from server (low-priority) queue if required */
-					if (sentASDUs[oldestSentASDU].queueIndex != -1) {
-						server.MarkASDUAsConfirmed(sentASDUs[oldestSentASDU].queueIndex,
-								sentASDUs[oldestSentASDU].entryTime);
-					}
+		if (callbackThreadRunning) {
+			callbackThreadRunning = false;
+			try {
+				callbackThread.join();
+			} catch (InterruptedException e) {
 
-					oldestSentASDU = (oldestSentASDU + 1) % maxSentASDUs;
-
-					int checkIndex = (newestSentASDU + 1) % maxSentASDUs;
-
-					if (oldestSentASDU == checkIndex) {
-						oldestSentASDU = -1;
-						break;
-					}
-
-					if (sentASDUs[oldestSentASDU].seqNo == seqNo) {
-						/* we arrived at the seq# that has been confirmed */
-
-						if (oldestSentASDU == newestSentASDU)
-							oldestSentASDU = -1;
-						else
-							oldestSentASDU = (oldestSentASDU + 1) % maxSentASDUs;
-
-						break;
-					}
-
-				} while (true);
+				e.printStackTrace();
 			}
 		}
 
-		return true;
+		DebugLog("Connection thread finished");
 	}
 
 	private boolean HandleMessage(byte[] buffer, int msgSize) throws IOException {
@@ -982,17 +803,296 @@ public class ClientConnection implements IMasterConnection {
 		return true;
 	}
 
-	private boolean AreByteArraysEqual(byte[] array1, byte[] array2) {
-		if (array1.length == array2.length) {
+	public boolean isActive() {
+		return active;
+	}
 
-			for (int i = 0; i < array1.length; i++) {
-				if (array1[i] != array2[i])
-					return false;
+	private boolean isSentBufferFull() {
+
+		if (oldestSentASDU == -1)
+			return false;
+
+		int newIndex = (newestSentASDU + 1) % maxSentASDUs;
+
+		if (newIndex == oldestSentASDU)
+			return true;
+		else
+			return false;
+	}
+
+	private void PrintSendBuffer() {
+
+		if (oldestSentASDU != -1) {
+
+			int currentIndex = oldestSentASDU;
+
+			int nextIndex = 0;
+
+			DebugLog("------k-buffer------");
+
+			do {
+				DebugLog(currentIndex + " : S " + sentASDUs[currentIndex].seqNo + " : time "
+						+ sentASDUs[currentIndex].sentTime + " : " + sentASDUs[currentIndex].queueIndex);
+
+				if (currentIndex == newestSentASDU)
+					nextIndex = -1;
+				else
+					currentIndex = (currentIndex + 1) % maxSentASDUs;
+
+			} while (nextIndex != -1);
+
+			DebugLog("--------------------");
+
+		}
+
+	}
+
+	private void ProcessASDUs() {
+		callbackThreadRunning = true;
+
+		while (callbackThreadRunning) {
+
+			while ((receivedASDUs.size() > 0) && (callbackThreadRunning) && (running)) {
+
+				ASDU asdu = receivedASDUs.poll();
+
+//				tangible.OutObject<ASDU> tempOut_asdu = new tangible.OutObject<ASDU>();
+//				if (receivedASDUs.TryDequeue(tempOut_asdu)) {
+//					asdu = tempOut_asdu.argValue;
+				try {
+					HandleASDU(asdu);
+				} catch (ASDUParsingException e) {
+
+					e.printStackTrace();
+				}
+//				} else {
+//					asdu = tempOut_asdu.argValue;
+//				}
+
 			}
 
-			return true;
-		} else
-			return false;
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+
+				e.printStackTrace();
+			}
+		}
+
+		DebugLog("ProcessASDUs exit thread");
+	}
+
+	private int receiveMessage(byte[] buffer) throws IOException {
+
+		int readLength = 0;
+
+//		if (socket.Poll(50, SelectMode.SelectRead)) {
+//			// maybe use socketStream.DataAvailable
+//
+//			// wait for first byte
+//			if (socketStream.Read(buffer, 0, 1) != 1)
+//				return -1;
+//
+//			if (buffer[0] != 0x68) {
+//				DebugLog("Missing SOF indicator!");
+//				return -1;
+//			}
+//
+//			// read length byte
+//			if (socketStream.Read(buffer, 1, 1) != 1)
+//				return -1;
+//
+//			int length = buffer[1];
+//
+//			// read remaining frame
+//			if (socketStream.Read(buffer, 2, length) != length) {
+//				DebugLog("Failed to read complete frame!");
+//				return -1;
+//			}
+//
+//			readLength = length + 2;
+//		}
+//		
+		if (socket != null && socket.isConnected()) {
+			InputStream is = socket.getInputStream();
+			// wait for first byte
+			if (is.read(buffer, 0, 1) != 1)
+				return -1;
+
+			if (buffer[0] != 0x68) {
+				DebugLog("Missing SOF indicator!");
+
+				return -1;
+			}
+
+			// read length byte
+			if (is.read(buffer, 1, 1) != 1)
+				return -1;
+
+			int length = buffer[1];
+
+			// read remaining frame
+			if (is.read(buffer, 2, length) != length) {
+				DebugLog("Failed to read complete frame!");
+
+				return -1;
+			}
+
+			readLength = length + 2;
+		}
+
+		return readLength;
+	}
+
+	private void ResetT3Timeout() {
+		nextT3Timeout = (long) System.currentTimeMillis() + (long) (apciParameters.getT3() * 1000);
+	}
+
+	public void sendACT_CON(ASDU asdu, boolean negative) {
+		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
+		asdu.setNegative(negative);
+
+		sendASDU(asdu);
+	}
+
+	public void sendACT_TERM(ASDU asdu) {
+		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_TERMINATION);
+		asdu.setNegative(false);
+
+		sendASDU(asdu);
+	}
+
+	/// <summary>
+/// Send a response ASDU over this connection
+/// </summary>
+/// <exception cref="ConnectionException">Throws an exception if the connection is no longer active (e.g. because it has been closed by the other side).</exception>
+/// <param name="asdu">The ASDU to send</param>
+	public void sendASDU(ASDU asdu) {
+		if (isActive())
+			SendASDUInternal(asdu);
+//		else
+//			throw new ConnectionException("Connection not active");
+	}
+
+	private void SendASDUInternal(ASDU asdu) {
+		if (isActive()) {
+			synchronized (waitingASDUsHighPrio) {
+
+				BufferFrame frame = new BufferFrame(new byte[256], 6);
+
+				asdu.encode(frame, alParameters);
+
+				waitingASDUsHighPrio.push(frame);
+			}
+
+			SendWaitingASDUs();
+		}
+	}
+
+	private int SendIMessage(BufferFrame asdu) {
+
+		byte[] buffer = asdu.getBuffer();
+
+		int msgSize = asdu.getMsgSize(); /* ASDU size + ACPI size */
+
+		buffer[0] = 0x68;
+
+		/* set size field */
+		buffer[1] = (byte) (msgSize - 2);
+
+		buffer[2] = (byte) ((sendCount % 128) * 2);
+		buffer[3] = (byte) (sendCount / 128);
+
+		buffer[4] = (byte) ((receiveCount % 128) * 2);
+		buffer[5] = (byte) (receiveCount / 128);
+
+		try {
+			synchronized (socketStream) {
+				socketStream.write(buffer, 0, msgSize);
+//				DebugLog("SEND I (size = " + msgSize + ") : " + BitConverter.ToString(buffer, 0, msgSize));
+				sendCount = (sendCount + 1) % 32768;
+				unconfirmedReceivedIMessages = 0;
+				timeoutT2Triggered = false;
+			}
+		} catch (IOException e) {
+			// socket error --> close connection
+			running = false;
+		}
+
+		return sendCount;
+	}
+
+	private void sendNextAvailableASDU() {
+		synchronized (sentASDUs) {
+			if (isSentBufferFull())
+				return;
+
+			OutObject<Long> timestamp = new OutObject<>();
+			OutObject<Integer> index = new OutObject<>();
+
+			asduQueue.lockASDUQueue();
+			BufferFrame asdu = asduQueue.getNextWaitingASDU(timestamp, index);
+
+			try {
+
+				if (asdu != null) {
+
+					int currentIndex = 0;
+
+					if (oldestSentASDU == -1) {
+						oldestSentASDU = 0;
+						newestSentASDU = 0;
+
+					} else {
+						currentIndex = (newestSentASDU + 1) % maxSentASDUs;
+					}
+
+					sentASDUs[currentIndex].entryTime = timestamp.argValue;
+					sentASDUs[currentIndex].queueIndex = index.argValue;
+					sentASDUs[currentIndex].seqNo = SendIMessage(asdu);
+					sentASDUs[currentIndex].sentTime = System.currentTimeMillis();
+
+					newestSentASDU = currentIndex;
+
+					PrintSendBuffer();
+				}
+			} finally {
+				asduQueue.unlockASDUQueue();
+			}
+		}
+	}
+
+	private boolean sendNextHighPriorityASDU() {
+		synchronized (sentASDUs) {
+			if (isSentBufferFull())
+				return false;
+
+			BufferFrame asdu = waitingASDUsHighPrio.pop();
+
+			if (asdu != null) {
+
+				int currentIndex = 0;
+
+				if (oldestSentASDU == -1) {
+					oldestSentASDU = 0;
+					newestSentASDU = 0;
+
+				} else {
+					currentIndex = (newestSentASDU + 1) % maxSentASDUs;
+				}
+
+				sentASDUs[currentIndex].queueIndex = -1;
+				sentASDUs[currentIndex].seqNo = SendIMessage(asdu);
+				sentASDUs[currentIndex].sentTime = System.currentTimeMillis();
+
+				newestSentASDU = currentIndex;
+
+				PrintSendBuffer();
+			} else
+				return false;
+		}
+
+		return true;
 	}
 
 //public boolean RemoteCertificateValidationCallback (object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -1035,156 +1135,57 @@ public class ClientConnection implements IMasterConnection {
 //		return false;
 //}
 
-	private void HandleConnection() {
+	private void SendSMessage() {
+		DebugLog("Send S message");
 
-		byte[] bytes = new byte[300];
+		byte[] msg = new byte[6];
 
-		try {
+		msg[0] = 0x68;
+		msg[1] = 0x04;
+		msg[2] = 0x01;
+		msg[3] = 0;
+
+		synchronized (socketStream) {
+			msg[4] = (byte) ((receiveCount % 128) * 2);
+			msg[5] = (byte) (receiveCount / 128);
 
 			try {
-
-				running = true;
-
-//				if (tlsSecInfo != null) {
-//
-//					DebugLog("Setup TLS");
-//
-//					SslStream sslStream = new SslStream(socketStream, true, RemoteCertificateValidationCallback);
-//
-//					boolean authenticationSuccess = false;
-//
-//					try {
-//						sslStream.AuthenticateAsServer(tlsSecInfo.OwnCertificate, true,
-//								System.Security.Authentication.SslProtocols.Tls, false);
-//
-//						if (sslStream.IsAuthenticated == true) {
-//							socketStream = sslStream;
-//							authenticationSuccess = true;
-//						}
-//
-//					} catch (IOException e) {
-//
-//						if (e.GetBaseException() != null) {
-//							DebugLog("TLS authentication error: " + e.GetBaseException().Message);
-//						} else {
-//							DebugLog("TLS authentication error: " + e.Message);
-//						}
-//
-//					}
-//
-//					if (authenticationSuccess == true)
-//						socketStream = sslStream;
-//					else {
-//						DebugLog("TLS authentication failed");
-//						running = false;
-//					}
-//				}
-
-				if (running) {
-
-//					socketStream.ReadTimeout = 50;
-
-					callbackThread = new Thread(() -> ProcessASDUs());
-					callbackThread.start();
-
-					ResetT3Timeout();
-				}
-
-				while (running) {
-
-					try {
-						// Receive the response from the remote device.
-						int bytesRec = receiveMessage(bytes);
-
-						if (bytesRec > 0) {
-
-//							DebugLog("RCVD: " + BitConverter.ToString(bytes, 0, bytesRec));
-
-							if (HandleMessage(bytes, bytesRec) == false) {
-								/* close connection on error */
-								running = false;
-							}
-
-							if (unconfirmedReceivedIMessages >= apciParameters.getW()) {
-								lastConfirmationTime = System.currentTimeMillis();
-								unconfirmedReceivedIMessages = 0;
-								timeoutT2Triggered = false;
-								SendSMessage();
-							}
-						} else if (bytesRec == -1) {
-							running = false;
-						}
-					} catch (IOException e) {
-						running = false;
-					}
-
-					if (fileServer != null)
-						fileServer.HandleFileTransmission();
-
-					if (handleTimeouts() == false)
-						running = false;
-
-					if (running) {
-						if (isActive())
-							SendWaitingASDUs();
-
-						Thread.sleep(1);
-					}
-				}
-
-				setActive(false);
-
-				DebugLog("CLOSE CONNECTION!");
-
-				// Release the socket.
-
-				socket.shutdownInput();
-				socket.shutdownOutput();
-				socket.close();
-
-				socketStream.close();
-				socket.close();
-
-				DebugLog("CONNECTION CLOSED!");
-
-//			} catch (ArgumentNullException ane) {
-//				DebugLog("ArgumentNullException : " + ane.ToString());
-			} catch (SocketException se) {
-				DebugLog("SocketException : " + se.getMessage());
-			} catch (Exception e) {
-				DebugLog("Unexpected exception : " + e.getMessage());
+				socketStream.write(msg, 0, msg.length);
+			} catch (IOException e) {
+				// socket error --> close connection
+				running = false;
 			}
-
-		} catch (Exception e) {
-			DebugLog(e.getMessage());
 		}
+	}
 
-		// unmark unconfirmed messages in server queue if k-buffer not empty
-		if (oldestSentASDU != -1)
-			server.UnmarkAllASDUs();
+	private void SendWaitingASDUs() {
 
-		server.Remove(this);
+		synchronized (waitingASDUsHighPrio) {
 
-		if (callbackThreadRunning) {
-			callbackThreadRunning = false;
-			try {
-				callbackThread.join();
-			} catch (InterruptedException e) {
+			while (waitingASDUsHighPrio.size() > 0) {
 
-				e.printStackTrace();
+				if (sendNextHighPriorityASDU() == false)
+					return;
+
+				if (running == false)
+					return;
 			}
 		}
 
-		DebugLog("Connection thread finished");
+		// send messages from low-priority queue
+		sendNextAvailableASDU();
 	}
 
-	public void Close() {
-		running = false;
-	}
+	public void setActive(boolean value) {
+		if (active != value) {
 
-	public void ASDUReadyToSend() {
-		if (isActive())
-			SendWaitingASDUs();
+			active = value;
+
+			if (active)
+				DebugLog("is active");
+			else
+				DebugLog("is not active");
+		}
 	}
 
 }

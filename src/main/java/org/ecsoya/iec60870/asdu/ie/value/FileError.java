@@ -7,8 +7,11 @@ public enum FileError {
 	UNEXPECTED_COMM_SERVICE(3),
 	UNEXPECTED_NAME_OF_FILE(4),
 	UNEXPECTED_NAME_OF_SECTION(5);
-	private int shortValue;
 	private static java.util.HashMap<Integer, FileError> mappings;
+
+	public static FileError forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, FileError> getMappings() {
 		if (mappings == null) {
@@ -21,6 +24,8 @@ public enum FileError {
 		return mappings;
 	}
 
+	private int shortValue;
+
 	private FileError(int value) {
 		shortValue = value;
 		getMappings().put(value, this);
@@ -28,9 +33,5 @@ public enum FileError {
 
 	public int getValue() {
 		return shortValue;
-	}
-
-	public static FileError forValue(int value) {
-		return getMappings().get(value);
 	}
 }

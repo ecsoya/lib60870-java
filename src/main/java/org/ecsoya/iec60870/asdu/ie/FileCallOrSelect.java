@@ -27,7 +27,7 @@ public class FileCallOrSelect extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -51,17 +51,32 @@ public class FileCallOrSelect extends InformationObject {
 
 	}
 
-	public NameOfFile getNof() {
-		return nof;
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
+
+		frame.setNextByte(nameOfSection);
+
+		frame.setNextByte((byte) scq.getValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 4;
 	}
 
 	public byte getNameOfSection() {
 		return nameOfSection;
 	}
 
-	@Override
-	public int GetEncodedSize() {
-		return 4;
+	public NameOfFile getNof() {
+		return nof;
+	}
+
+	public SelectAndCallQualifier getScq() {
+		return scq;
 	}
 
 	@Override
@@ -72,20 +87,5 @@ public class FileCallOrSelect extends InformationObject {
 	@Override
 	public TypeID getType() {
 		return TypeID.F_SC_NA_1;
-	}
-
-	public SelectAndCallQualifier getScq() {
-		return scq;
-	}
-
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
-
-		frame.setNextByte(nameOfSection);
-
-		frame.setNextByte((byte) scq.getValue());
 	}
 }

@@ -29,8 +29,11 @@ public enum EventState {
 
 	public static final int SIZE = java.lang.Integer.SIZE;
 
-	private int intValue;
 	private static java.util.HashMap<Integer, EventState> mappings;
+
+	public static EventState forValue(int value) {
+		return getMappings().get(value);
+	}
 
 	private static java.util.HashMap<Integer, EventState> getMappings() {
 		if (mappings == null) {
@@ -43,6 +46,8 @@ public enum EventState {
 		return mappings;
 	}
 
+	private int intValue;
+
 	private EventState(int value) {
 		intValue = value;
 		getMappings().put(value, this);
@@ -50,9 +55,5 @@ public enum EventState {
 
 	public int getValue() {
 		return intValue;
-	}
-
-	public static EventState forValue(int value) {
-		return getMappings().get(value);
 	}
 }

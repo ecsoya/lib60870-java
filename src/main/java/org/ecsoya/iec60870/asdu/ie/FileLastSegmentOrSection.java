@@ -28,7 +28,7 @@ public class FileLastSegmentOrSection extends InformationObject {
 		if (!isSequence)
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < GetEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize())
 			throw new ASDUParsingException("Message too small");
 
 		int nofValue;
@@ -56,26 +56,28 @@ public class FileLastSegmentOrSection extends InformationObject {
 	}
 
 	@Override
-	public int GetEncodedSize() {
-		return 5;
-	}
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+		frame.setNextByte((byte) (nof.getValue() % 256));
+		frame.setNextByte((byte) (nof.getValue() / 256));
 
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
+		frame.setNextByte(nameOfSection);
 
-	@Override
-	public TypeID getType() {
-		return TypeID.F_LS_NA_1;
-	}
-
-	public LastSectionOrSegmentQualifier getLsq() {
-		return lsq;
+		frame.setNextByte(lsq.getValue());
+		frame.setNextByte(chs);
 	}
 
 	public byte getChs() {
 		return chs;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 5;
+	}
+
+	public LastSectionOrSegmentQualifier getLsq() {
+		return lsq;
 	}
 
 	public byte getNameOfSection() {
@@ -87,14 +89,12 @@ public class FileLastSegmentOrSection extends InformationObject {
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
-		frame.setNextByte((byte) (nof.getValue() % 256));
-		frame.setNextByte((byte) (nof.getValue() / 256));
+	public boolean getSupportsSequence() {
+		return false;
+	}
 
-		frame.setNextByte(nameOfSection);
-
-		frame.setNextByte(lsq.getValue());
-		frame.setNextByte(chs);
+	@Override
+	public TypeID getType() {
+		return TypeID.F_LS_NA_1;
 	}
 }

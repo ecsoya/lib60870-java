@@ -31,34 +31,8 @@ import org.ecsoya.iec60870.asdu.ie.value.BinaryCounterReading;
  */
 
 public class IntegratedTotals extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 5;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_IT_NA_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private BinaryCounterReading bcr;
 
-	public final BinaryCounterReading getBCR() {
-		return bcr;
-	}
-
-	public IntegratedTotals(int ioa, BinaryCounterReading bcr) {
-		super(ioa);
-		this.bcr = bcr;
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal IntegratedTotals(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSquence)
 	public IntegratedTotals(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSquence)
 			throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSquence);
@@ -66,17 +40,41 @@ public class IntegratedTotals extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
 		bcr = new BinaryCounterReading(msg, startIndex);
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public IntegratedTotals(int ioa, BinaryCounterReading bcr) {
+		super(ioa);
+		this.bcr = bcr;
+	}
 
-		frame.appendBytes(bcr.GetEncodedValue());
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+
+		frame.appendBytes(bcr.getEncodedValue());
+	}
+
+	public final BinaryCounterReading getBCR() {
+		return bcr;
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 5;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_IT_NA_1;
 	}
 }

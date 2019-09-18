@@ -32,31 +32,26 @@ import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
  */
 
 public class MeasuredValueScaled extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ME_NB_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private ScaledValue scaledValue;
-
-	public final ScaledValue getScaledValue() {
-		return this.scaledValue;
-	}
 
 	private QualityDescriptor quality;
 
-	public final QualityDescriptor getQuality() {
-		return this.quality;
+	public MeasuredValueScaled(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSquence)
+			throws ASDUParsingException {
+		super(parameters, msg, startIndex, isSquence);
+		if (!isSquence) {
+			startIndex += parameters.getSizeOfIOA(); // skip IOA
+		}
+
+		if ((msg.length - startIndex) < getEncodedSize()) {
+			throw new ASDUParsingException("Message too small");
+		}
+
+		scaledValue = new ScaledValue(msg, startIndex);
+		startIndex += 2;
+
+		/* parse QDS (quality) */
+		quality = new QualityDescriptor(msg[startIndex++]);
 	}
 
 	/**
@@ -74,33 +69,36 @@ public class MeasuredValueScaled extends InformationObject {
 		this.quality = quality;
 	}
 
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal MeasuredValueScaled(ApplicationLayerParameters parameters, byte[] msg, int startIndex, bool isSquence)
-	public MeasuredValueScaled(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSquence)
-			throws ASDUParsingException {
-		super(parameters, msg, startIndex, isSquence);
-		if (!isSquence) {
-			startIndex += parameters.getSizeOfIOA(); // skip IOA
-		}
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
-			throw new ASDUParsingException("Message too small");
-		}
+		frame.appendBytes(scaledValue.getEncodedValue());
 
-		scaledValue = new ScaledValue(msg, startIndex);
-		startIndex += 2;
-
-		/* parse QDS (quality) */
-		quality = new QualityDescriptor(msg[startIndex++]);
+		frame.setNextByte(quality.getEncodedValue());
 	}
 
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public int getEncodedSize() {
+		return 3;
+	}
 
-		frame.appendBytes(scaledValue.GetEncodedValue());
+	public final QualityDescriptor getQuality() {
+		return this.quality;
+	}
 
-		frame.setNextByte(quality.getEncodedValue());
+	public final ScaledValue getScaledValue() {
+		return this.scaledValue;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ME_NB_1;
 	}
 
 }

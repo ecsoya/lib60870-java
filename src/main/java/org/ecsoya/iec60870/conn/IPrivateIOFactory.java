@@ -12,7 +12,7 @@ public interface IPrivateIOFactory {
 	 * @param startIndex start index of the payload in the message
 	 * @param isSequence If set to <c>true</c> is sequence.
 	 */
-	InformationObject Decode(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSequence);
+	InformationObject decode(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSequence);
 
 	/**
 	 * Gets the encoded payload size of the object (information object size without
@@ -20,5 +20,5 @@ public interface IPrivateIOFactory {
 	 * 
 	 * @return The encoded size in bytes
 	 */
-	int GetEncodedSize();
+	int getEncodedSize();
 }

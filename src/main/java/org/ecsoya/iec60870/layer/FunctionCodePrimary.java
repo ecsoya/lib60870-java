@@ -15,6 +15,15 @@ public enum FunctionCodePrimary {
 	REQUEST_USER_DATA_CLASS_1(10), //
 	REQUEST_USER_DATA_CLASS_2(11);//
 
+	/**
+	 * @param fc
+	 * @return
+	 */
+	public static FunctionCodePrimary get(int value) {
+		return Arrays.asList(FunctionCodePrimary.values()).stream().filter(v -> value == v.value).findFirst()
+				.orElse(null);
+	}
+
 	private final int value;
 
 	/**
@@ -26,14 +35,5 @@ public enum FunctionCodePrimary {
 
 	public int getValue() {
 		return value;
-	}
-
-	/**
-	 * @param fc
-	 * @return
-	 */
-	public static FunctionCodePrimary get(int value) {
-		return Arrays.asList(FunctionCodePrimary.values()).stream().filter(v -> value == v.value).findFirst()
-				.orElse(null);
 	}
 }

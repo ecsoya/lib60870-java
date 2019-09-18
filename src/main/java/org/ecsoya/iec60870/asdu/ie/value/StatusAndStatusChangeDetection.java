@@ -25,39 +25,18 @@ import org.ecsoya.iec60870.ASDUParsingException;
 
 public class StatusAndStatusChangeDetection {
 
-	public final short getSTn() {
-		return (short) (encodedValue[0] + (256 * encodedValue[1]));
+	private byte[] encodedValue = new byte[4];
+
+	public StatusAndStatusChangeDetection() {
 	}
 
-	public final void setSTn(short value) {
-		encodedValue[0] = (byte) (value % 256);
-		encodedValue[1] = (byte) (value / 256);
-	}
-
-	public final short getCDn() {
-		return (short) (encodedValue[2] + (256 * encodedValue[3]));
-	}
-
-	public final void setCDn(short value) {
-		encodedValue[2] = (byte) (value % 256);
-		encodedValue[3] = (byte) (value / 256);
-	}
-
-	public final boolean ST(int i) {
-		if ((i >= 0) && (i < 16)) {
-			return ((int) (getSTn() & (1 << i)) != 0);
-		} else {
-			return false;
+	public StatusAndStatusChangeDetection(byte[] msg, int startIndex) throws ASDUParsingException {
+		if (msg.length < startIndex + 4) {
+			throw new ASDUParsingException("Message too small for parsing StatusAndStatusChangeDetection");
 		}
-	}
 
-	public final void ST(int i, boolean value) {
-		if ((i >= 0) && (i < 16)) {
-			if (value) {
-				setSTn((short) (getSTn() | (1 << i)));
-			} else {
-				setSTn((short) (getSTn() & ~(1 << i)));
-			}
+		for (int i = 0; i < 4; i++) {
+			encodedValue[i] = msg[startIndex + i];
 		}
 	}
 
@@ -79,23 +58,44 @@ public class StatusAndStatusChangeDetection {
 		}
 	}
 
-	public StatusAndStatusChangeDetection() {
+	public final short getCDn() {
+		return (short) (encodedValue[2] + (256 * encodedValue[3]));
 	}
 
-	public StatusAndStatusChangeDetection(byte[] msg, int startIndex) throws ASDUParsingException {
-		if (msg.length < startIndex + 4) {
-			throw new ASDUParsingException("Message too small for parsing StatusAndStatusChangeDetection");
-		}
-
-		for (int i = 0; i < 4; i++) {
-			encodedValue[i] = msg[startIndex + i];
-		}
-	}
-
-	private byte[] encodedValue = new byte[4];
-
-	public final byte[] GetEncodedValue() {
+	public final byte[] getEncodedValue() {
 		return encodedValue;
+	}
+
+	public final short getSTn() {
+		return (short) (encodedValue[0] + (256 * encodedValue[1]));
+	}
+
+	public final void setCDn(short value) {
+		encodedValue[2] = (byte) (value % 256);
+		encodedValue[3] = (byte) (value / 256);
+	}
+
+	public final void setSTn(short value) {
+		encodedValue[0] = (byte) (value % 256);
+		encodedValue[1] = (byte) (value / 256);
+	}
+
+	public final boolean ST(int i) {
+		if ((i >= 0) && (i < 16)) {
+			return ((int) (getSTn() & (1 << i)) != 0);
+		} else {
+			return false;
+		}
+	}
+
+	public final void ST(int i, boolean value) {
+		if ((i >= 0) && (i < 16)) {
+			if (value) {
+				setSTn((short) (getSTn() | (1 << i)));
+			} else {
+				setSTn((short) (getSTn() & ~(1 << i)));
+			}
+		}
 	}
 
 	@Override

@@ -29,11 +29,11 @@ import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
  * master
  */
 public interface IMasterConnection {
-	void SendASDU(ASDU asdu);
+	ApplicationLayerParameters getApplicationLayerParameters();
 
-	void SendACT_CON(ASDU asdu, boolean negative);
+	void sendACT_CON(ASDU asdu, boolean negative);
 
-	void SendACT_TERM(ASDU asdu);
+	void sendACT_TERM(ASDU asdu);
 
-	ApplicationLayerParameters GetApplicationLayerParameters();
+	void sendASDU(ASDU asdu);
 }

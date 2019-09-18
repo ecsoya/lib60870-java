@@ -8,45 +8,16 @@ import org.ecsoya.iec60870.asdu.TypeID;
 import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
 
 public class SetpointCommandScaled extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 3;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.C_SE_NB_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return false;
-	}
-
 	private ScaledValue scaledValue;
 
-	public final ScaledValue getScaledValue() {
-		return scaledValue;
-	}
-
 	private SetpointCommandQualifier qos;
-
-	public final SetpointCommandQualifier getQOS() {
-		return qos;
-	}
-
-	public SetpointCommandScaled(int objectAddress, ScaledValue value, SetpointCommandQualifier qos) {
-		super(objectAddress);
-		this.scaledValue = value;
-		this.qos = qos;
-	}
 
 	public SetpointCommandScaled(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
 			throws ASDUParsingException {
 		super(parameters, msg, startIndex, false);
 		startIndex += parameters.getSizeOfIOA(); // skip IOA
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -56,13 +27,42 @@ public class SetpointCommandScaled extends InformationObject {
 		this.qos = new SetpointCommandQualifier(msg[startIndex++]);
 	}
 
-	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public SetpointCommandScaled(int objectAddress, ScaledValue value, SetpointCommandQualifier qos) {
+		super(objectAddress);
+		this.scaledValue = value;
+		this.qos = qos;
+	}
 
-		frame.appendBytes(this.scaledValue.GetEncodedValue());
+	@Override
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
+
+		frame.appendBytes(this.scaledValue.getEncodedValue());
 
 		frame.setNextByte(this.qos.GetEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 3;
+	}
+
+	public final SetpointCommandQualifier getQOS() {
+		return qos;
+	}
+
+	public final ScaledValue getScaledValue() {
+		return scaledValue;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return false;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.C_SE_NB_1;
 	}
 }
 //====================================================================================================

@@ -15,6 +15,11 @@ public class BufferFrame implements Frame, Cloneable {
 		this.bufPos = startPos;
 	}
 
+	public void appendBytes(byte[] bytes) {
+		for (int i = 0; i < bytes.length; i++)
+			buffer[bufPos++] = bytes[i];
+	}
+
 	public BufferFrame clone() {
 		byte[] newBuffer = new byte[getMsgSize()];
 
@@ -30,24 +35,19 @@ public class BufferFrame implements Frame, Cloneable {
 		return clone;
 	}
 
-	public void resetFrame() {
-		bufPos = startPos;
-	}
-
-	public void setNextByte(byte value) {
-		buffer[bufPos++] = value;
-	}
-
-	public void appendBytes(byte[] bytes) {
-		for (int i = 0; i < bytes.length; i++)
-			buffer[bufPos++] = bytes[i];
+	public byte[] getBuffer() {
+		return buffer;
 	}
 
 	public int getMsgSize() {
 		return bufPos;
 	}
 
-	public byte[] getBuffer() {
-		return buffer;
+	public void resetFrame() {
+		bufPos = startPos;
+	}
+
+	public void setNextByte(byte value) {
+		buffer[bufPos++] = value;
 	}
 }

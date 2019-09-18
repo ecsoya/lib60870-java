@@ -13,15 +13,8 @@ public class Slave {
 
 	protected boolean debugOutput;
 
-	public final boolean getDebugOutput() {
-		return this.debugOutput;
-	}
-
-	public final void setDebugOutput(boolean value) {
-		debugOutput = value;
-	}
-
 	public InterrogationHandler interrogationHandler = null;
+
 	public Object InterrogationHandlerParameter = null;
 
 	public CounterInterrogationHandler counterInterrogationHandler = null;
@@ -45,60 +38,14 @@ public class Slave {
 	protected FileReadyHandler fileReadyHandler = null;
 	protected Object fileReadyHandlerParameter = null;
 
-	/**
-	 * Sets a callback for interrogaton requests.
-	 * 
-	 * @param handler   The interrogation request handler callback function
-	 * @param parameter user provided parameter that is passed to the callback
-	 */
-	public final void SetInterrogationHandler(InterrogationHandler handler, Object parameter) {
-		this.interrogationHandler = handler;
-		this.InterrogationHandlerParameter = parameter;
+	protected FilesAvailable filesAvailable = new FilesAvailable();
+
+	public final FilesAvailable getAvailableFiles() {
+		return filesAvailable;
 	}
 
-	/**
-	 * Sets a callback for counter interrogaton requests.
-	 * 
-	 * @param handler   The counter interrogation request handler callback function
-	 * @param parameter user provided parameter that is passed to the callback
-	 */
-	public final void SetCounterInterrogationHandler(CounterInterrogationHandler handler, Object parameter) {
-		this.counterInterrogationHandler = handler;
-		this.counterInterrogationHandlerParameter = parameter;
-	}
-
-	/**
-	 * Sets a callback for read requests.
-	 * 
-	 * @param handler   The read request handler callback function
-	 * @param parameter user provided parameter that is passed to the callback
-	 */
-	public final void SetReadHandler(ReadHandler handler, Object parameter) {
-		this.readHandler = handler;
-		this.readHandlerParameter = parameter;
-	}
-
-	/**
-	 * Sets a callback for the clock synchronization request.
-	 * 
-	 * @param handler   The clock synchronization request handler callback function
-	 * @param parameter user provided parameter that is passed to the callback
-	 */
-	public final void SetClockSynchronizationHandler(ClockSynchronizationHandler handler, Object parameter) {
-		this.clockSynchronizationHandler = handler;
-		this.clockSynchronizationHandlerParameter = parameter;
-	}
-
-	public final void SetResetProcessHandler(ResetProcessHandler handler, Object parameter) {
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: this.resetProcessHandler = (Object parameter, IMasterConnection connection, ASDU asdu, byte qrp) -> handler.invoke(parameter, connection, asdu, qrp);
-		this.resetProcessHandler = handler;
-		this.resetProcessHandlerParameter = parameter;
-	}
-
-	public final void SetDelayAcquisitionHandler(DelayAcquisitionHandler handler, Object parameter) {
-		this.delayAcquisitionHandler = handler;
-		this.delayAcquisitionHandlerParameter = parameter;
+	public final boolean getDebugOutput() {
+		return this.debugOutput;
 	}
 
 	/**
@@ -109,19 +56,71 @@ public class Slave {
 	 * @param handler   The ASDU callback function
 	 * @param parameter user provided parameter that is passed to the callback
 	 */
-	public final void SetASDUHandler(ASDUHandler handler, Object parameter) {
+	public final void setASDUHandler(ASDUHandler handler, Object parameter) {
 		this.asduHandler = handler;
 		this.asduHandlerParameter = parameter;
 	}
 
-	public final void SetFileReadyHandler(FileReadyHandler handler, Object parameter) {
+	/**
+	 * Sets a callback for the clock synchronization request.
+	 * 
+	 * @param handler   The clock synchronization request handler callback function
+	 * @param parameter user provided parameter that is passed to the callback
+	 */
+	public final void setClockSynchronizationHandler(ClockSynchronizationHandler handler, Object parameter) {
+		this.clockSynchronizationHandler = handler;
+		this.clockSynchronizationHandlerParameter = parameter;
+	}
+
+	/**
+	 * Sets a callback for counter interrogaton requests.
+	 * 
+	 * @param handler   The counter interrogation request handler callback function
+	 * @param parameter user provided parameter that is passed to the callback
+	 */
+	public final void setCounterInterrogationHandler(CounterInterrogationHandler handler, Object parameter) {
+		this.counterInterrogationHandler = handler;
+		this.counterInterrogationHandlerParameter = parameter;
+	}
+
+	public final void setDebugOutput(boolean value) {
+		debugOutput = value;
+	}
+
+	public final void setDelayAcquisitionHandler(DelayAcquisitionHandler handler, Object parameter) {
+		this.delayAcquisitionHandler = handler;
+		this.delayAcquisitionHandlerParameter = parameter;
+	}
+
+	public final void setFileReadyHandler(FileReadyHandler handler, Object parameter) {
 		fileReadyHandler = handler;
 		fileReadyHandlerParameter = parameter;
 	}
 
-	protected FilesAvailable filesAvailable = new FilesAvailable();
+	/**
+	 * Sets a callback for interrogaton requests.
+	 * 
+	 * @param handler   The interrogation request handler callback function
+	 * @param parameter user provided parameter that is passed to the callback
+	 */
+	public final void setInterrogationHandler(InterrogationHandler handler, Object parameter) {
+		this.interrogationHandler = handler;
+		this.InterrogationHandlerParameter = parameter;
+	}
 
-	public final FilesAvailable GetAvailableFiles() {
-		return filesAvailable;
+	/**
+	 * Sets a callback for read requests.
+	 * 
+	 * @param handler   The read request handler callback function
+	 * @param parameter user provided parameter that is passed to the callback
+	 */
+	public final void setReadHandler(ReadHandler handler, Object parameter) {
+		this.readHandler = handler;
+		this.readHandlerParameter = parameter;
+	}
+
+	public final void setResetProcessHandler(ResetProcessHandler handler, Object parameter) {
+		this.resetProcessHandler = handler;
+		this.resetProcessHandlerParameter = parameter;
 	}
 }

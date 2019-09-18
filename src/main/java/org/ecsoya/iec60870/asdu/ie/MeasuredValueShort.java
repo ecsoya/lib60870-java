@@ -34,42 +34,9 @@ import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
  */
 
 public class MeasuredValueShort extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 5;
-	}
-
-	@Override
-	public TypeID getType() {
-		return TypeID.M_ME_NC_1;
-	}
-
-	@Override
-	public boolean getSupportsSequence() {
-		return true;
-	}
-
 	private float value;
 
-	public final float getValue() {
-		return this.value;
-	}
-
-	public final void setValue(float value) {
-		this.value = value;
-	}
-
 	private QualityDescriptor quality;
-
-	public final QualityDescriptor getQuality() {
-		return this.quality;
-	}
-
-	public MeasuredValueShort(int objectAddress, float value, QualityDescriptor quality) {
-		super(objectAddress);
-		this.value = value;
-		this.quality = quality;
-	}
 
 	public MeasuredValueShort(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSequence)
 			throws ASDUParsingException {
@@ -78,7 +45,7 @@ public class MeasuredValueShort extends InformationObject {
 			startIndex += parameters.getSizeOfIOA(); // skip IOA
 		}
 
-		if ((msg.length - startIndex) < GetEncodedSize()) {
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
 		}
 
@@ -90,14 +57,47 @@ public class MeasuredValueShort extends InformationObject {
 		quality = new QualityDescriptor(msg[startIndex++]);
 	}
 
+	public MeasuredValueShort(int objectAddress, float value, QualityDescriptor quality) {
+		super(objectAddress);
+		this.value = value;
+		this.quality = quality;
+	}
+
 	@Override
-	public void Encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
-		super.Encode(frame, parameters, isSequence);
+	public void encode(Frame frame, ApplicationLayerParameters parameters, boolean isSequence) {
+		super.encode(frame, parameters, isSequence);
 
 		byte[] floatEncoded = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putFloat(value).array();
 
 		frame.appendBytes(floatEncoded);
 
 		frame.setNextByte(quality.getEncodedValue());
+	}
+
+	@Override
+	public int getEncodedSize() {
+		return 5;
+	}
+
+	public final QualityDescriptor getQuality() {
+		return this.quality;
+	}
+
+	@Override
+	public boolean getSupportsSequence() {
+		return true;
+	}
+
+	@Override
+	public TypeID getType() {
+		return TypeID.M_ME_NC_1;
+	}
+
+	public final float getValue() {
+		return this.value;
+	}
+
+	public final void setValue(float value) {
+		this.value = value;
 	}
 }

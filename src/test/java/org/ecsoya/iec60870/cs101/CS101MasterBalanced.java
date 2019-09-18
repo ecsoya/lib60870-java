@@ -17,20 +17,14 @@ import org.ecsoya.iec60870.layer.TcpServerVirtualSerialPort;
  * @author Jin Liu (jin.liu@soyatec.com)
  */
 public class CS101MasterBalanced {
-	private static boolean rcvdRawMessageHandler(Object parameter, byte[] message, int messageSize) {
-		System.out
-				.println("RECV " + ByteBuffer.wrap(message, 0, messageSize).order(ByteOrder.nativeOrder()).toString());
+	private static boolean asduReceivedHandler(Object parameter, int address, ASDU asdu) {
+		System.out.println(asdu.toString());
+
 		return true;
 	}
 
 	private static void linkLayerStateChanged(Object parameter, int address, LinkLayerState newState) {
 		System.out.println("LL state event: " + newState.toString());
-	}
-
-	private static boolean asduReceivedHandler(Object parameter, int address, ASDU asdu) {
-		System.out.println(asdu.toString());
-
-		return true;
 	}
 
 	public static void main(String[] args) {
@@ -61,7 +55,7 @@ public class CS101MasterBalanced {
 		master.setSlaveAddress(2);
 		master.setASDUReceivedHandler(
 				(Object parameter, int address, ASDU asdu) -> asduReceivedHandler(parameter, address, asdu), null);
-		master.SetLinkLayerStateChangedHandler((Object parameter, int address,
+		master.setLinkLayerStateChangedHandler((Object parameter, int address,
 				LinkLayerState newState) -> linkLayerStateChanged(parameter, address, newState), null);
 		master.setReceivedRawMessageHandler((Object parameter, byte[] message,
 				int messageSize) -> rcvdRawMessageHandler(parameter, message, messageSize), null);
@@ -70,7 +64,7 @@ public class CS101MasterBalanced {
 
 		// This will start a separate thread!
 		// alternativley you can you master.Run() inside the loop
-		master.Start();
+		master.start();
 
 		while (running) {
 
@@ -78,10 +72,10 @@ public class CS101MasterBalanced {
 
 				lastTimestamp = System.currentTimeMillis();
 
-				if (master.GetLinkLayerState() == LinkLayerState.AVAILABLE) {
+				if (master.getLinkLayerState() == LinkLayerState.AVAILABLE) {
 					master.sendInterrogationCommand(CauseOfTransmission.ACTIVATION, 1, (byte) 20);
 				} else {
-					System.out.println("Link layer: " + master.GetLinkLayerState().toString());
+					System.out.println("Link layer: " + master.getLinkLayerState().toString());
 				}
 			}
 
@@ -92,9 +86,15 @@ public class CS101MasterBalanced {
 			}
 		}
 
-		master.Stop();
+		master.stop();
 
 //		serialPort.close();
+	}
+
+	private static boolean rcvdRawMessageHandler(Object parameter, byte[] message, int messageSize) {
+		System.out
+				.println("RECV " + ByteBuffer.wrap(message, 0, messageSize).order(ByteOrder.nativeOrder()).toString());
+		return true;
 	}
 
 }

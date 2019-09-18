@@ -6,14 +6,17 @@ import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.TypeID;
 
 public class ReadCommand extends InformationObject {
-	@Override
-	public int GetEncodedSize() {
-		return 0;
+	public ReadCommand(ApplicationLayerParameters parameters, byte[] msg, int startIndex) throws ASDUParsingException {
+		super(parameters, msg, startIndex, false);
+	}
+
+	public ReadCommand(int ioa) {
+		super(ioa);
 	}
 
 	@Override
-	public TypeID getType() {
-		return TypeID.C_RD_NA_1;
+	public int getEncodedSize() {
+		return 0;
 	}
 
 	@Override
@@ -21,13 +24,8 @@ public class ReadCommand extends InformationObject {
 		return false;
 	}
 
-	public ReadCommand(int ioa) {
-		super(ioa);
-	}
-
-//C# TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: internal ReadCommand(ApplicationLayerParameters parameters, byte[] msg, int startIndex)
-	public ReadCommand(ApplicationLayerParameters parameters, byte[] msg, int startIndex) throws ASDUParsingException {
-		super(parameters, msg, startIndex, false);
+	@Override
+	public TypeID getType() {
+		return TypeID.C_RD_NA_1;
 	}
 }

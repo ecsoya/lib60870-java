@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.cs104;
 
 import java.util.concurrent.locks.LockSupport;
@@ -6,8 +22,7 @@ import java.util.function.Consumer;
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.asdu.ASDU;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
-
-import tangible.OutObject;
+import org.ecsoya.iec60870.tangible.OutObject;
 
 public class ASDUQueue {
 	private static class ASDUQueueEntry {
@@ -71,10 +86,11 @@ public class ASDUQueue {
 			} else {
 				latestQueueEntry = (latestQueueEntry + 1) % maxQueueSize;
 
-				if (latestQueueEntry == oldestQueueEntry)
+				if (latestQueueEntry == oldestQueueEntry) {
 					oldestQueueEntry = (oldestQueueEntry + 1) % maxQueueSize;
-				else
+				} else {
 					numberOfAsduInQueue++;
+				}
 
 				enqueuedASDUs[latestQueueEntry].asdu.resetFrame();
 				asdu.encode(enqueuedASDUs[latestQueueEntry].asdu, parameters);
@@ -92,8 +108,9 @@ public class ASDUQueue {
 		long timestamp = 0;
 		int index = -1;
 
-		if (enqueuedASDUs == null)
+		if (enqueuedASDUs == null) {
 			return null;
+		}
 
 		// synchronized (enqueuedASDUs) {
 		if (numberOfAsduInQueue > 0) {
@@ -102,14 +119,16 @@ public class ASDUQueue {
 
 			while (enqueuedASDUs[currentIndex].state != QueueEntryState.WAITING_FOR_TRANSMISSION) {
 
-				if (enqueuedASDUs[currentIndex].state == QueueEntryState.NOT_USED)
+				if (enqueuedASDUs[currentIndex].state == QueueEntryState.NOT_USED) {
 					break;
+				}
 
 				currentIndex = (currentIndex + 1) % maxQueueSize;
 
 				// break if we reached the oldest entry again
-				if (currentIndex == oldestQueueEntry)
+				if (currentIndex == oldestQueueEntry) {
 					break;
+				}
 			}
 
 			if (enqueuedASDUs[currentIndex].state == QueueEntryState.WAITING_FOR_TRANSMISSION) {
@@ -136,11 +155,13 @@ public class ASDUQueue {
 	}
 
 	public void markASDUAsConfirmed(int index, long timestamp) {
-		if (enqueuedASDUs == null)
+		if (enqueuedASDUs == null) {
 			return;
+		}
 
-		if ((index < 0) || (index > enqueuedASDUs.length))
+		if ((index < 0) || (index > enqueuedASDUs.length)) {
 			return;
+		}
 
 		synchronized (enqueuedASDUs) {
 
@@ -169,20 +190,23 @@ public class ASDUQueue {
 							if (currentIndex == oldestQueueEntry) {
 								oldestQueueEntry = (index + 1) % maxQueueSize;
 
-								if (numberOfAsduInQueue == 1)
+								if (numberOfAsduInQueue == 1) {
 									latestQueueEntry = oldestQueueEntry;
+								}
 
 								break;
 							}
 
 							currentIndex = currentIndex - 1;
 
-							if (currentIndex < 0)
+							if (currentIndex < 0) {
 								currentIndex = maxQueueSize - 1;
+							}
 
 							// break if we reached the first deleted entry again
-							if (currentIndex == index)
+							if (currentIndex == index) {
 								break;
+							}
 
 						}
 
@@ -203,8 +227,9 @@ public class ASDUQueue {
 		synchronized (enqueuedASDUs) {
 			if (numberOfAsduInQueue > 0) {
 				for (int i = 0; i < enqueuedASDUs.length; i++) {
-					if (enqueuedASDUs[i].state == QueueEntryState.SENT_BUT_NOT_CONFIRMED)
+					if (enqueuedASDUs[i].state == QueueEntryState.SENT_BUT_NOT_CONFIRMED) {
 						enqueuedASDUs[i].state = QueueEntryState.WAITING_FOR_TRANSMISSION;
+					}
 				}
 			}
 		}

@@ -1,27 +1,22 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu.ie.value;
 
-import org.ecsoya.iec60870.ASDUParsingException;
-
-/*
- *  Copyright 2016 MZ Automation GmbH
- *
- *  This file is part of lib60870.NET
- *
- *  lib60870.NET is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  lib60870.NET is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with lib60870.NET.  If not, see <http: //www.gnu.org/licenses/>.
- *
- *  See COPYING file for the complete license text.
- */
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 
 public class ScaledValue {
 	private byte[] encodedValue = new byte[2];
@@ -57,7 +52,7 @@ public class ScaledValue {
 		uintVal = encodedValue[0];
 		uintVal += (short) (encodedValue[1] * 0x100);
 
-		return (short) uintVal;
+		return uintVal;
 	}
 
 	public final int getValue() {
@@ -74,7 +69,7 @@ public class ScaledValue {
 	}
 
 	public final void setShortValue(short value) {
-		short uintVal = (short) value;
+		short uintVal = value;
 
 		encodedValue[0] = (byte) (uintVal % 256);
 		encodedValue[1] = (byte) (uintVal / 256);

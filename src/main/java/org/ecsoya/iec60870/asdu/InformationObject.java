@@ -1,6 +1,21 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.Frame;
 
 public abstract class InformationObject {
@@ -53,7 +68,7 @@ public abstract class InformationObject {
 	/**
 	 * Gets the encoded payload size of the object (information object size without
 	 * the IOA)
-	 * 
+	 *
 	 * @return The encoded size in bytes
 	 */
 	public abstract int getEncodedSize();
@@ -65,7 +80,7 @@ public abstract class InformationObject {
 	/**
 	 * Indicates if this information object type supports sequence of information
 	 * objects encoding
-	 * 
+	 *
 	 * <value><c>true</c> if supports sequence encoding; otherwise,
 	 * <c>false</c>.</value>
 	 */
@@ -73,7 +88,7 @@ public abstract class InformationObject {
 
 	/**
 	 * The type ID (message type) of the information object type
-	 * 
+	 *
 	 * <value>The type.</value>
 	 */
 	public abstract TypeID getType();

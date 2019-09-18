@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.ecsoya.iec60870.cs104;
 
 import java.io.IOException;
@@ -8,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.Scanner;
 
 import org.ecsoya.iec60870.CP56Time2a;
-import org.ecsoya.iec60870.ConnectionException;
 import org.ecsoya.iec60870.LibraryCommon;
 import org.ecsoya.iec60870.asdu.ASDU;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
@@ -29,7 +25,8 @@ import org.ecsoya.iec60870.asdu.ie.value.FileErrorCode;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
 import org.ecsoya.iec60870.asdu.ie.value.QualifierOfInterrogation;
 import org.ecsoya.iec60870.asdu.ie.value.StepCommandValue;
-import org.ecsoya.iec60870.conn.IFileReceiver;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.file.IFileReceiver;
 
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
@@ -38,17 +35,19 @@ public class CS104Client1 {
 
 	public static class Receiver implements IFileReceiver {
 
+		@Override
 		public void finished(FileErrorCode result) {
 			System.out.println("File download finished - code: " + result);
 		}
 
+		@Override
 		public void segmentReceived(byte sectionName, int offset, int size, byte[] data) {
 			System.out.println(
 					String.format("File segment - sectionName: {0} offset: {1} size: {2}", sectionName, offset, size));
 		}
 	}
 
-	private static boolean asduReceivedHandler(Object parameter, ASDU asdu) {
+	private static boolean asduReceivedHandler(Object parameter, int address, ASDU asdu) {
 		System.out.println(asdu);
 
 		try {
@@ -123,11 +122,12 @@ public class CS104Client1 {
 				}
 
 			} else if (asdu.getTypeId() == TypeID.C_IC_NA_1) {
-				if (asdu.getCauseOfTransmission() == CauseOfTransmission.ACTIVATION_CON)
+				if (asdu.getCauseOfTransmission() == CauseOfTransmission.ACTIVATION_CON) {
 					System.out.println(
 							(asdu.isNegative() ? "Negative" : "Positive") + "confirmation for interrogation command");
-				else if (asdu.getCauseOfTransmission() == CauseOfTransmission.ACTIVATION_TERMINATION)
+				} else if (asdu.getCauseOfTransmission() == CauseOfTransmission.ACTIVATION_TERMINATION) {
 					System.out.println("Interrogation command terminated");
+				}
 			} else if (asdu.getTypeId() == TypeID.F_DR_TA_1) {
 				System.out.println("Received file directory:\n------------------------");
 				int ca = asdu.getCommonAddress();
@@ -178,7 +178,8 @@ public class CS104Client1 {
 
 		con.setDebug(true);
 
-		con.setASDUReceivedHandler((Object parameter, ASDU asdu) -> asduReceivedHandler(parameter, asdu), null);
+		con.setASDUReceivedHandler(
+				(Object parameter, int address, ASDU asdu) -> asduReceivedHandler(parameter, address, asdu), null);
 		con.setConnectionHandler(
 				(Object parameter, ConnectionEvent connectionEvent) -> ConnectionHandler(parameter, connectionEvent),
 				null);
@@ -228,7 +229,7 @@ public class CS104Client1 {
 
 		Scanner in = new Scanner(System.in);
 		while (in.hasNext()) {
-			String string = (String) in.next();
+			String string = in.next();
 			break;
 		}
 	}

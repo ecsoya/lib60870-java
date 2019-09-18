@@ -1,9 +1,19 @@
-//====================================================================================================
-//The Free Edition of C# to Java Converter limits conversion output to 100 lines per file.
-
-//To subscribe to the Premium Edition, visit our website:
-//https://www.tangiblesoftwaresolutions.com/order/order-csharp-to-java.html
-//====================================================================================================
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 
 package org.ecsoya.iec60870.cs101;
 
@@ -12,13 +22,11 @@ import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.CP16Time2a;
 import org.ecsoya.iec60870.CP56Time2a;
-import org.ecsoya.iec60870.ConnectionException;
-import org.ecsoya.iec60870.RawMessageHandler;
 import org.ecsoya.iec60870.asdu.ASDU;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.InformationObject;
@@ -31,9 +39,11 @@ import org.ecsoya.iec60870.asdu.ie.ResetProcessCommand;
 import org.ecsoya.iec60870.asdu.ie.TestCommand;
 import org.ecsoya.iec60870.asdu.ie.TestCommandWithCP56Time2a;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
-import org.ecsoya.iec60870.conn.FileClient;
-import org.ecsoya.iec60870.conn.IFileReceiver;
-import org.ecsoya.iec60870.conn.Master;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.Master;
+import org.ecsoya.iec60870.core.file.FileClient;
+import org.ecsoya.iec60870.core.file.IFileReceiver;
+import org.ecsoya.iec60870.core.handler.RawMessageHandler;
 import org.ecsoya.iec60870.layer.IPrimaryLinkLayerCallbacks;
 import org.ecsoya.iec60870.layer.LinkLayer;
 import org.ecsoya.iec60870.layer.LinkLayerMode;
@@ -150,8 +160,9 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 
 		if (alParams == null) {
 			this.appLayerParameters = new ApplicationLayerParameters();
-		} else
+		} else {
 			this.appLayerParameters = alParams;
+		}
 
 		this.transceiver = new SerialTransceiverFT12(serialStream, linkLayerParameters, DebugLog);
 
@@ -177,6 +188,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		this.fileClient = null;
 	}
 
+	@Override
 	public void accessDemand(int slaveAddress) {
 		debugLog("Access demand slave " + slaveAddress);
 		linkLayerUnbalanced.requestClass1Data(slaveAddress);
@@ -196,10 +208,11 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	private BufferFrame dequeueUserData() {
 		synchronized (userDataQueue) {
 
-			if (userDataQueue.size() > 0)
+			if (userDataQueue.size() > 0) {
 				return userDataQueue.pop();
-			else
+			} else {
 				return null;
+			}
 		}
 	}
 
@@ -228,6 +241,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		}
 	}
 
+	@Override
 	public ApplicationLayerParameters
 
 			getApplicationLayerParameters() {
@@ -241,10 +255,12 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		return linkLayer.isDir();
 	}
 
+	@Override
 	public void getFile(int commonAddress, int informationObjectAddress, NameOfFile nameOfFile, IFileReceiver receiver)
 			throws ConnectionException {
-		if (fileClient == null)
+		if (fileClient == null) {
 			fileClient = new FileClient(this, DebugLog);
+		}
 
 		fileClient.requestFile(commonAddress, informationObjectAddress, nameOfFile, receiver);
 	}
@@ -254,15 +270,16 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	}
 
 	public LinkLayerState getLinkLayerState(int slaveAddress) {
-		if (linkLayerUnbalanced != null)
+		if (linkLayerUnbalanced != null) {
 			try {
 				return linkLayerUnbalanced.getStateOfSlave(slaveAddress);
 			} catch (Exception e) {
 
 				return primaryLinkLayer.getLinkLayerState();
 			}
-		else
+		} else {
 			return primaryLinkLayer.getLinkLayerState();
+		}
 	}
 
 	public final int getOwnAddress() {
@@ -270,10 +287,11 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	}
 
 	public int getSlaveAddress() {
-		if (primaryLinkLayer == null)
+		if (primaryLinkLayer == null) {
 			return this.slaveAddress;
-		else
+		} else {
 			return primaryLinkLayer.getLinkLayerAddressOtherStation();
+		}
 	}
 
 	/// <summary>
@@ -284,8 +302,9 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		return (v) -> {
 			BufferFrame asdu = null;
 
-			if (CS101Master.this.isUserDataAvailable())
+			if (CS101Master.this.isUserDataAvailable()) {
 				return dequeueUserData();
+			}
 
 			return asdu;
 
@@ -310,12 +329,13 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 
 			boolean messageHandled = false;
 
-			if (fileClient != null)
+			if (fileClient != null) {
 				try {
 					messageHandled = fileClient.handleFileAsdu(asdu);
 				} catch (ASDUParsingException e) {
 					messageHandled = false;
 				}
+			}
 
 			if (messageHandled == false) {
 				handleReceivedASDU(address, asdu);
@@ -330,10 +350,11 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 
 	private boolean isUserDataAvailable() {
 		synchronized (userDataQueue) {
-			if (userDataQueue.size() > 0)
+			if (userDataQueue.size() > 0) {
 				return true;
-			else
+			} else {
 				return false;
+			}
 		}
 	}
 
@@ -371,10 +392,12 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		}
 	}
 
+	@Override
 	public void sendASDU(ASDU asdu) throws ConnectionException {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendClockSyncCommand(int commonAddress, CP56Time2a time) throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.ACTIVATION, false, false,
 				(byte) appLayerParameters.getOA(), commonAddress, false);
@@ -384,6 +407,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendControlCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			InformationObject informationObject) throws ConnectionException {
 		ASDU controlCommand = new ASDU(appLayerParameters, causeOfTransmission, false, false,
@@ -394,6 +418,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(controlCommand);
 	}
 
+	@Override
 	public void sendCounterInterrogationCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			byte qualifierOfCounter) throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, causeOfTransmission, false, false, (byte) appLayerParameters.getOA(),
@@ -404,6 +429,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendDelayAcquisitionCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			CP16Time2a delay) throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.ACTIVATION, false, false,
@@ -414,6 +440,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendInterrogationCommand(CauseOfTransmission cot, int commonAddress, byte qualifierOfInterrogation)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, cot, false, false, (byte) appLayerParameters.getOA(), commonAddress,
@@ -428,6 +455,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		linkLayer.sendTestFunction();
 	}
 
+	@Override
 	public void sendReadCommand(int commonAddress, int informationObjectAddress) throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.REQUEST, false, false,
 				(byte) appLayerParameters.getOA(), commonAddress, false);
@@ -437,6 +465,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendResetProcessCommand(CauseOfTransmission causeOfTransmission, int commonAddress, byte qualifier)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.ACTIVATION, false, false,
@@ -447,6 +476,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendTestCommand(int commonAddress) throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.ACTIVATION, false, false,
 				(byte) appLayerParameters.getOA(), commonAddress, false);
@@ -456,6 +486,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		enqueueUserData(asdu);
 	}
 
+	@Override
 	public void sendTestCommandWithCP56Time2a(int commonAddress, short testSequenceNumber, CP56Time2a timestamp)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(appLayerParameters, CauseOfTransmission.ACTIVATION, false, false,
@@ -471,10 +502,11 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	}
 
 	public void setLinkLayerStateChangedHandler(LinkLayerStateChanged handler, Object parameter) {
-		if (linkLayerUnbalanced != null)
+		if (linkLayerUnbalanced != null) {
 			linkLayerUnbalanced.setLinkLayerStateChanged(handler, parameter);
-		else
+		} else {
 			primaryLinkLayer.setLinkLayerStateChanged(handler, parameter);
+		}
 	}
 
 	public final void setOwnAddress(int value) {
@@ -512,6 +544,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		}
 
 		workerThread = new Thread() {
+			@Override
 			public void run() {
 				ReceiveMessageLoop();
 			}
@@ -537,10 +570,12 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 		}
 	}
 
+	@Override
 	public void timeout(int slaveAddress) {
 		debugLog("Timeout accessing slave " + slaveAddress);
 	}
 
+	@Override
 	public void userData(int slaveAddress, byte[] message, int start, int length)
 			throws ConnectionException, IOException {
 		debugLog("User data slave " + slaveAddress);
@@ -556,13 +591,14 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 
 		boolean messageHandled = false;
 
-		if (fileClient != null)
+		if (fileClient != null) {
 			try {
 				messageHandled = fileClient.handleFileAsdu(asdu);
 			} catch (ASDUParsingException e) {
 				messageHandled = false;
 				e.printStackTrace();
 			}
+		}
 
 		if (messageHandled == false) {
 			handleReceivedASDU(slaveAddress, asdu);
@@ -575,9 +611,10 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	/// </summary>
 	/// <param name="slaveAddress">Slave link layer address.</param>
 	public void useSlaveAddress(int slaveAddress) {
-		if (primaryLinkLayer != null)
+		if (primaryLinkLayer != null) {
 			primaryLinkLayer.setLinkLayerAddressOtherStation(slaveAddress);
-		else
+		} else {
 			this.slaveAddress = slaveAddress;
+		}
 	}
 }

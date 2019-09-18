@@ -1,6 +1,19 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
@@ -46,16 +59,19 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 		System.out.println(log);
 	}
 
+	@Override
 	public int getAddress() {
 		return linkLayerAddress;
 	}
 
+	@Override
 	public void handleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb, boolean fcv,
 			byte[] msg, int userDataStart, int userDataLength) throws IOException {
 		// check frame count bit if fcv == true
 		if (fcv) {
-			if (checkFCB(fcb) == false)
+			if (checkFCB(fcb) == false) {
 				return;
+			}
 		}
 
 		switch (fcp) {
@@ -73,10 +89,11 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 			debugLog("SLL - RESET REMOTE LINK"); {
 			expectedFcb = true;
 
-			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
+			if (linkLayer.linkLayerParameters.isUseSingleCharACK()) {
 				linkLayer.sendSingleCharACK();
-			else
+			} else {
 				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+			}
 
 			applicationLayer.resetCUReceived(false);
 		}
@@ -87,10 +104,11 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 			debugLog("SLL - RESET FCB"); {
 			expectedFcb = true;
 
-			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
+			if (linkLayer.linkLayerParameters.isUseSingleCharACK()) {
 				linkLayer.sendSingleCharACK();
-			else
+			} else {
 				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+			}
 
 			applicationLayer.resetCUReceived(true);
 		}
@@ -102,15 +120,16 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 
 			boolean accessDemand = applicationLayer.isClass1DataAvailable();
 
-			if (asdu != null)
+			if (asdu != null) {
 				linkLayer.sendVariableLengthFrameSecondary(FunctionCodeSecondary.RESP_USER_DATA, linkLayerAddress,
 						accessDemand, false, asdu);
-			else {
-				if (linkLayer.linkLayerParameters.isUseSingleCharACK() && (accessDemand == false))
+			} else {
+				if (linkLayer.linkLayerParameters.isUseSingleCharACK() && (accessDemand == false)) {
 					linkLayer.sendSingleCharACK();
-				else
+				} else {
 					linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.RESP_NACK_NO_DATA, linkLayerAddress,
 							accessDemand, false);
+				}
 			}
 
 		}
@@ -122,15 +141,16 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 
 			boolean accessDemand = applicationLayer.isClass1DataAvailable();
 
-			if (asdu != null)
+			if (asdu != null) {
 				linkLayer.sendVariableLengthFrameSecondary(FunctionCodeSecondary.RESP_USER_DATA, linkLayerAddress,
 						accessDemand, false, asdu);
-			else {
-				if (linkLayer.linkLayerParameters.isUseSingleCharACK() && (accessDemand == false))
+			} else {
+				if (linkLayer.linkLayerParameters.isUseSingleCharACK() && (accessDemand == false)) {
 					linkLayer.sendSingleCharACK();
-				else
+				} else {
 					linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.RESP_NACK_NO_DATA, linkLayerAddress,
 							accessDemand, false);
+				}
 			}
 
 		}
@@ -163,10 +183,12 @@ public class SecondaryLinkLayerUnbalanced extends SecondaryLinkLayer {
 		}
 	}
 
+	@Override
 	public void runStateMachine() {
 
 	}
 
+	@Override
 	public void setAddress(int value) {
 		linkLayerAddress = value;
 	}

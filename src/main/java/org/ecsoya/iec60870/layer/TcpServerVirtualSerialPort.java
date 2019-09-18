@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.DataInputStream;
@@ -44,9 +60,11 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 		}
 	}
 
+	@Override
 	public void flush() throws IOException {
-		if (socketStream != null)
+		if (socketStream != null) {
 			socketStream.flush();
+		}
 	}
 
 	/**
@@ -58,10 +76,11 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 
 	/*************************
 	 * Stream implementation
-	 * 
+	 *
 	 * @throws IOException
 	 */
 
+	@Override
 	public int read(byte[] buffer, int offset, int count) throws IOException {
 		if (socketStream != null) {
 
@@ -123,8 +142,9 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 
 								while (connected) {
 
-									if (!conSocket.isConnected())
+									if (!conSocket.isConnected()) {
 										break;
+									}
 
 									Thread.sleep(10);
 								}
@@ -134,8 +154,9 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 								conSocket = null;
 
 								debugLog("Connection from " + ipEndPoint.toString() + "closed");
-							} else
+							} else {
 								newSocket.close();
+							}
 						}
 
 					} catch (Exception e) {
@@ -195,6 +216,7 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 		}
 	}
 
+	@Override
 	public void write(byte[] buffer, int offset, int count) {
 		if (socketStream != null) {
 			try {

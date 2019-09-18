@@ -1,8 +1,23 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu;
 
 import java.util.ArrayList;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.Frame;
 import org.ecsoya.iec60870.asdu.ie.Bitstring32;
@@ -72,7 +87,7 @@ import org.ecsoya.iec60870.asdu.ie.StepPositionWithCP56Time2a;
 import org.ecsoya.iec60870.asdu.ie.TestCommand;
 import org.ecsoya.iec60870.asdu.ie.TestCommandWithCP56Time2a;
 import org.ecsoya.iec60870.asdu.ie.value.PrivateInformationObjectTypes;
-import org.ecsoya.iec60870.conn.IPrivateIOFactory;
+import org.ecsoya.iec60870.core.IPrivateIOFactory;
 
 /**
  * This class represents an application layer message. It contains some generic
@@ -87,7 +102,7 @@ public class ASDU {
 
 	private byte variableStructureQualifier; // variable structure qualifier
 
-	private CauseOfTransmission causeOfTransmission = CauseOfTransmission.values()[0]; // cause
+	private CauseOfTransmission causeOfTransmission; // cause
 	private byte originatorAddress; // originator address
 	private boolean isTest; // is message a test message
 	private boolean isNegative; // is message a negative confirmation
@@ -155,7 +170,7 @@ public class ASDU {
 
 	/**
 	 * Initializes a new instance of the <see cref="lib60870.CS101.ASDU"/> class.
-	 * 
+	 *
 	 * @param parameters application layer parameters to be used for
 	 *                   encoding/decoding
 	 * @param cot        Cause of transmission (COT)
@@ -194,14 +209,14 @@ public class ASDU {
 
 	/**
 	 * Adds an information object to the ASDU.
-	 * 
+	 *
 	 * This function add an information object (InformationObject) to the ASDU.
 	 * NOTE: that all information objects have to be of the same type. Otherwise an
 	 * ArgumentException will be thrown. The function returns true when the
 	 * information object has been added to the ASDU. The function returns false if
 	 * there is no space left in the ASDU to add the information object, or when
 	 * object cannot be added to a sequence because the IOA does not match.
-	 * 
+	 *
 	 * @return <c>true</c>, if information object was added, <c>false</c> otherwise.
 	 * @param io The information object to add
 	 */
@@ -260,10 +275,11 @@ public class ASDU {
 
 		encode(frame, parameters);
 
-		if (frame.getMsgSize() == expectedSize)
+		if (frame.getMsgSize() == expectedSize) {
 			return frame.getBuffer();
-		else
+		} else {
 			return null;
+		}
 	}
 
 	public final void encode(Frame frame, ApplicationLayerParameters parameters) {
@@ -283,7 +299,7 @@ public class ASDU {
 		frame.setNextByte(cotByte);
 
 		if (parameters.getSizeOfCOT() == 2) {
-			frame.setNextByte((byte) originatorAddress);
+			frame.setNextByte(originatorAddress);
 		}
 
 		frame.setNextByte((byte) (commonAddress % 256));
@@ -292,9 +308,9 @@ public class ASDU {
 			frame.setNextByte((byte) (commonAddress / 256));
 		}
 
-		if (payload != null)
+		if (payload != null) {
 			frame.appendBytes(payload);
-		else {
+		} else {
 
 			boolean isFirst = true;
 
@@ -304,10 +320,11 @@ public class ASDU {
 					io.encode(frame, parameters, false);
 					isFirst = false;
 				} else {
-					if (isSequence())
+					if (isSequence()) {
 						io.encode(frame, parameters, true);
-					else
+					} else {
 						io.encode(frame, parameters, false);
+					}
 				}
 
 			}
@@ -330,8 +347,9 @@ public class ASDU {
 	/// <exception cref="lib60870.ASDUParsingException">Thrown when there is a
 	/// problem parsing the ASDU</exception>
 	public InformationObject getElement(int index) throws ASDUParsingException {
-		if (index >= getNumberOfElements())
+		if (index >= getNumberOfElements()) {
 			throw new ASDUParsingException("Index out of range");
+		}
 
 		InformationObject retVal = null;
 
@@ -351,9 +369,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new SinglePointInformation(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -368,9 +387,10 @@ public class ASDU {
 						parameters.getSizeOfIOA() + (index * elementSize), true);
 
 				retVal.setObjectAddress(ioa + index);
-			} else
+			} else {
 				retVal = new SinglePointWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -386,9 +406,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new DoublePointInformation(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -404,9 +425,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new DoublePointWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -422,9 +444,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new StepPositionInformation(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -440,9 +463,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new StepPositionWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -457,8 +481,9 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new Bitstring32(parameters, payload, index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -474,9 +499,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new Bitstring32WithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -492,9 +518,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueNormalized(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -510,9 +537,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueNormalizedWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -528,9 +556,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueScaled(parameters, payload, index * (parameters.getSizeOfIOA() + elementSize),
 						false);
+			}
 
 			break;
 
@@ -546,9 +575,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueScaledWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -564,9 +594,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueShort(parameters, payload, index * (parameters.getSizeOfIOA() + elementSize),
 						false);
+			}
 
 			break;
 
@@ -582,9 +613,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueShortWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -600,9 +632,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new IntegratedTotals(parameters, payload, index * (parameters.getSizeOfIOA() + elementSize),
 						false);
+			}
 
 			break;
 
@@ -618,9 +651,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new IntegratedTotalsWithCP24Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -636,9 +670,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new EventOfProtectionEquipment(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -654,9 +689,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new PackedStartEventsOfProtectionEquipment(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -672,9 +708,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new PackedOutputCircuitInfo(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -690,9 +727,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new PackedSinglePointWithSCD(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -708,9 +746,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueNormalizedWithoutQuality(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -728,9 +767,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new SinglePointWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -746,9 +786,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new DoublePointWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -764,9 +805,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new StepPositionWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -782,9 +824,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new Bitstring32WithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -800,9 +843,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueNormalizedWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -818,9 +862,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueScaledWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -836,9 +881,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new MeasuredValueShortWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -854,9 +900,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new IntegratedTotalsWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -872,9 +919,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new EventOfProtectionEquipmentWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -890,9 +938,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new PackedStartEventsOfProtectionEquipmentWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -908,9 +957,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new PackedOutputCircuitInfoWithCP56Time2a(parameters, payload,
 						index * (parameters.getSizeOfIOA() + elementSize), false);
+			}
 
 			break;
 
@@ -1185,9 +1235,10 @@ public class ASDU {
 
 				retVal.setObjectAddress(ioa + index);
 
-			} else
+			} else {
 				retVal = new FileDirectory(parameters, payload, index * (parameters.getSizeOfIOA() + elementSize),
 						false);
+			}
 
 			break;
 
@@ -1209,16 +1260,18 @@ public class ASDU {
 						retVal = ioFactory.decode(parameters, payload, index * elementSize, true);
 
 						retVal.setObjectAddress(ioa + index);
-					} else
+					} else {
 						retVal = ioFactory.decode(parameters, payload, index * elementSize, false);
+					}
 
 				}
 			}
 			break;
 		}
 
-		if (retVal == null)
+		if (retVal == null) {
 			throw new ASDUParsingException("Unknown ASDU type id:" + typeId);
+		}
 
 		return retVal;
 	}
@@ -1280,10 +1333,11 @@ public class ASDU {
 	/// <value><c>true</c> if this instance is a sequence; otherwise,
 	/// <c>false</c>.</value>
 	public boolean isSequence() {
-		if ((variableStructureQualifier & 0x80) != 0)
+		if ((variableStructureQualifier & 0x80) != 0) {
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
 
 	/**
@@ -1315,6 +1369,7 @@ public class ASDU {
 		this.originatorAddress = originatorAddress;
 	}
 
+	@Override
 	public String
 
 			toString() {
@@ -1322,17 +1377,21 @@ public class ASDU {
 
 		ret = "TypeID: " + typeId.toString() + " COT: " + causeOfTransmission.toString();
 
-		if (parameters.getSizeOfCOT() == 2)
+		if (parameters.getSizeOfCOT() == 2) {
 			ret += " OA: " + originatorAddress;
+		}
 
-		if (isTest)
+		if (isTest) {
 			ret += " [TEST]";
+		}
 
-		if (isNegative)
+		if (isNegative) {
 			ret += " [NEG]";
+		}
 
-		if (isSequence())
+		if (isSequence()) {
 			ret += " [SEQ]";
+		}
 
 		ret += " elements: " + getNumberOfElements();
 

@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.ecsoya.iec60870.cs101;
 
 import java.nio.ByteBuffer;
@@ -8,6 +5,7 @@ import java.nio.ByteOrder;
 
 import org.ecsoya.iec60870.asdu.ASDU;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
+import org.ecsoya.iec60870.core.ConnectionException;
 import org.ecsoya.iec60870.layer.LinkLayerMode;
 import org.ecsoya.iec60870.layer.LinkLayerParameters;
 import org.ecsoya.iec60870.layer.LinkLayerState;
@@ -38,8 +36,9 @@ public class CS101MasterBalanced {
 
 		String portName = "/dev/ttyUSB1";
 
-		if (args.length > 0)
+		if (args.length > 0) {
 			portName = args[0];
+		}
 
 		// Setup serial port
 		TcpServerVirtualSerialPort serialPort = new TcpServerVirtualSerialPort();
@@ -73,7 +72,12 @@ public class CS101MasterBalanced {
 				lastTimestamp = System.currentTimeMillis();
 
 				if (master.getLinkLayerState() == LinkLayerState.AVAILABLE) {
-					master.sendInterrogationCommand(CauseOfTransmission.ACTIVATION, 1, (byte) 20);
+					try {
+						master.sendInterrogationCommand(CauseOfTransmission.ACTIVATION, 1, (byte) 20);
+					} catch (ConnectionException e) {
+						e.printStackTrace();
+						running = false;
+					}
 				} else {
 					System.out.println("Link layer: " + master.getLinkLayerState().toString());
 				}

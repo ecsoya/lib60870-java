@@ -1,11 +1,24 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu.ie;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.CP56Time2a;
 import org.ecsoya.iec60870.Frame;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.TypeID;
 import org.ecsoya.iec60870.asdu.ie.value.ScaledValue;
@@ -28,8 +41,9 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 		super(parameters, msg, startIndex);
 		startIndex += parameters.getSizeOfIOA(); /* skip IOA */
 
-		if ((msg.length - startIndex) < getEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
+		}
 
 		startIndex += 3; /* scaled value + qualifier */
 
@@ -49,7 +63,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#Encode(org.ecsoya.iec60870.
 	 * Frame, org.ecsoya.iec60870.asdu.ApplicationLayerParameters, boolean)
@@ -62,7 +76,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#GetEncodedSize()
 	 */
 	@Override
@@ -72,7 +86,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#getSupportsSequence()
 	 */
 	@Override
@@ -82,7 +96,7 @@ public class SetpointCommandScaledWithCP56Time2a extends SetpointCommandScaled {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.ecsoya.iec60870.asdu.ie.SetpointCommandScaled#getType()
 	 */
 	@Override

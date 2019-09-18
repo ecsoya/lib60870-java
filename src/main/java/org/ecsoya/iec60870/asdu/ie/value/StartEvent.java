@@ -1,10 +1,19 @@
-//====================================================================================================
-//The Free Edition of C# to Java Converter limits conversion output to 100 lines per file.
-
-//To subscribe to the Premium Edition, visit our website:
-//https://www.tangiblesoftwaresolutions.com/order/order-csharp-to-java.html
-//====================================================================================================
-
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu.ie.value;
 
 /**
@@ -28,7 +37,7 @@ public class StartEvent {
 
 	/**
 	 * General start of operation
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getGS() {
@@ -57,7 +66,7 @@ public class StartEvent {
 
 	/**
 	 * Start of operation IE (earth current)
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getSIE() {
@@ -70,7 +79,7 @@ public class StartEvent {
 
 	/**
 	 * Start of operation phase L1
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getSL1() {
@@ -83,7 +92,7 @@ public class StartEvent {
 
 	/**
 	 * Start of operation phase L2
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getSL2() {
@@ -96,7 +105,7 @@ public class StartEvent {
 
 	/**
 	 * Start of operation phase L3
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getSL3() {
@@ -109,7 +118,7 @@ public class StartEvent {
 
 	/**
 	 * Start of operation in reverse direction
-	 * 
+	 *
 	 * <value><c>true</c> if started; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getSRD() {
@@ -201,16 +210,21 @@ public class StartEvent {
 		if (getSL2()) {
 			sb.append("[SL2]");
 		}
-		if (getSL3())
+		if (getSL3()) {
 			sb.append("[SL3]");
-		if (getSIE())
+		}
+		if (getSIE()) {
 			sb.append("[SIE]");
-		if (getSRD())
+		}
+		if (getSRD()) {
 			sb.append("[SRD]");
-		if (getRES1())
+		}
+		if (getRES1()) {
 			sb.append("[RES1]");
-		if (getRES2())
+		}
+		if (getRES2()) {
 			sb.append("[RES2]");
+		}
 
 		return sb.toString();
 	}

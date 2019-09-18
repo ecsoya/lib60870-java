@@ -1,9 +1,25 @@
-package org.ecsoya.iec60870.conn;
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package org.ecsoya.iec60870.core.file;
 
 import java.util.function.Consumer;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ASDU;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.ie.FileACK;
@@ -16,7 +32,8 @@ import org.ecsoya.iec60870.asdu.ie.value.AcknowledgeQualifier;
 import org.ecsoya.iec60870.asdu.ie.value.FileServerState;
 import org.ecsoya.iec60870.asdu.ie.value.LastSectionOrSegmentQualifier;
 import org.ecsoya.iec60870.asdu.ie.value.SelectAndCallQualifier;
-import org.ecsoya.iec60870.conn.FilesAvailable.CS101n104File;
+import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.file.FilesAvailable.CS101n104File;
 
 public class FileServer {
 
@@ -142,8 +159,7 @@ public class FileServer {
 								logger("Reveived positive file section ACK - send last section indication");
 
 								responseAsdu.addInformationObject(new FileLastSegmentOrSection(
-										file.getInformationObjectAddress(), file.getNameOfFile(),
-										(byte) currentSectionNumber,
+										file.getInformationObjectAddress(), file.getNameOfFile(), currentSectionNumber,
 										LastSectionOrSegmentQualifier.FILE_TRANSFER_WITHOUT_DEACT, fileChecksum));
 
 								transferState = FileServerState.WAITING_FOR_FILE_ACK;
@@ -355,8 +371,9 @@ public class FileServer {
 
 						int currentSegmentSize = currentSectionSize - currentSectionOffset;
 
-						if (currentSegmentSize > maxSegmentSize)
+						if (currentSegmentSize > maxSegmentSize) {
 							currentSegmentSize = maxSegmentSize;
+						}
 
 						byte[] segmentData = new byte[currentSegmentSize];
 

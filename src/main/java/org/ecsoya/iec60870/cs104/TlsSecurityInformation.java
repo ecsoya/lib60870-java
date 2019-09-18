@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.cs104;
 
 import java.util.ArrayList;
@@ -34,11 +50,11 @@ public class TlsSecurityInformation {
 		caCertificates = new ArrayList<X509Certificate>();
 	}
 
-	public final void AddAllowedCertificate(X509Certificate allowedCertificate) {
+	public final void addAllowedCertificate(X509Certificate allowedCertificate) {
 		otherCertificates.add(allowedCertificate);
 	}
 
-	public final void AddCA(X509Certificate caCertificate) {
+	public final void addCA(X509Certificate caCertificate) {
 		caCertificates.add(caCertificate);
 	}
 
@@ -50,7 +66,7 @@ public class TlsSecurityInformation {
 	 * Gets or sets a value indicating whether this
 	 * <see cref="lib60870.TlsSecurityInformation"/> allow only specific
 	 * certificates.
-	 * 
+	 *
 	 * <value><c>true</c> if allow only specific certificates; otherwise,
 	 * <c>false</c>.</value>
 	 */
@@ -66,7 +82,7 @@ public class TlsSecurityInformation {
 	 * Gets or sets a value indicating whether this
 	 * <see cref="lib60870.TlsSecurityInformation"/> performs a X509 chain
 	 * validation against the registered CA certificates
-	 * 
+	 *
 	 * <value><c>true</c> if chain validation; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getChainValidation() {

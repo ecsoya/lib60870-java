@@ -1,10 +1,25 @@
-package org.ecsoya.iec60870.conn;
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package org.ecsoya.iec60870.core.file;
 
 import java.util.function.Consumer;
 
-import org.ecsoya.iec60870.ASDUParsingException;
-import org.ecsoya.iec60870.ConnectionException;
 import org.ecsoya.iec60870.asdu.ASDU;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.ie.FileACK;
@@ -20,6 +35,8 @@ import org.ecsoya.iec60870.asdu.ie.value.FileErrorCode;
 import org.ecsoya.iec60870.asdu.ie.value.LastSectionOrSegmentQualifier;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
 import org.ecsoya.iec60870.asdu.ie.value.SelectAndCallQualifier;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.Master;
 
 public class FileClient {
 	private FileClientState state = FileClientState.IDLE;
@@ -44,8 +61,9 @@ public class FileClient {
 
 		master.sendASDU(deactivateFile);
 
-		if (fileReceiver != null)
+		if (fileReceiver != null) {
 			fileReceiver.finished(errorCode);
+		}
 
 		resetStateToIdle();
 	}
@@ -67,23 +85,28 @@ public class FileClient {
 
 				if (asdu.getCauseOfTransmission() == CauseOfTransmission.UNKNOWN_TYPE_ID) {
 
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.UNKNOWN_SERVICE);
+					}
 				} else if (asdu.getCauseOfTransmission() == CauseOfTransmission.UNKNOWN_COMMON_ADDRESS_OF_ASDU) {
 
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.UNKNOWN_CA);
+					}
 				} else if (asdu.getCauseOfTransmission() == CauseOfTransmission.UNKNOWN_INFORMATION_OBJECT_ADDRESS) {
 
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.UNKNOWN_IOA);
+					}
 				} else {
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.PROTOCOL_ERROR);
+					}
 				}
 			} else {
-				if (fileReceiver != null)
+				if (fileReceiver != null) {
 					fileReceiver.finished(FileErrorCode.PROTOCOL_ERROR);
+				}
 			}
 
 			resetStateToIdle();
@@ -111,8 +134,9 @@ public class FileClient {
 					state = FileClientState.WAITING_FOR_SECTION_READY;
 
 				} else {
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.FILE_NOT_READY);
+					}
 
 					resetStateToIdle();
 				}
@@ -156,8 +180,9 @@ public class FileClient {
 
 			} else if (state == FileClientState.IDLE) {
 			} else {
-				if (fileReceiver != null)
+				if (fileReceiver != null) {
 					fileReceiver.finished(FileErrorCode.PROTOCOL_ERROR);
+				}
 
 				resetStateToIdle();
 			}
@@ -211,8 +236,9 @@ public class FileClient {
 				} else if (lastSection.getLsq() == LastSectionOrSegmentQualifier.FILE_TRANSFER_WITH_DEACT) {
 					/* slave aborted transfer */
 
-					if (fileReceiver != null)
+					if (fileReceiver != null) {
 						fileReceiver.finished(FileErrorCode.ABORTED_BY_REMOTE);
+					}
 
 					resetStateToIdle();
 				} else if (lastSection.getLsq() == LastSectionOrSegmentQualifier.FILE_TRANSFER_WITHOUT_DEACT) {
@@ -225,8 +251,9 @@ public class FileClient {
 
 						debugLog("Send FILE ACK");
 
-						if (fileReceiver != null)
+						if (fileReceiver != null) {
 							fileReceiver.finished(FileErrorCode.SUCCESS);
+						}
 
 						resetStateToIdle();
 					} else {

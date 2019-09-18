@@ -1,6 +1,19 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
@@ -8,7 +21,7 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 import org.ecsoya.iec60870.BufferFrame;
-import org.ecsoya.iec60870.RawMessageHandler;
+import org.ecsoya.iec60870.core.handler.RawMessageHandler;
 
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
@@ -86,23 +99,26 @@ public class LinkLayer {
 
 		boolean handleMessage = true;
 
-		if (receivedRawMessageHandler != null)
+		if (receivedRawMessageHandler != null) {
 			handleMessage = receivedRawMessageHandler.invoke(receivedRawMessageHandlerParameter, msg, msgSize);
+		}
 
 		if (handleMessage) {
 
-			if (linkLayerMode == LinkLayerMode.BALANCED)
+			if (linkLayerMode == LinkLayerMode.BALANCED) {
 				handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
-			else {
-				if (secondaryLinkLayer != null)
+			} else {
+				if (secondaryLinkLayer != null) {
 					parseHeaderSecondaryUnbalanced(buffer, msgSize);
-				else if (primaryLinkLayer != null)
+				} else if (primaryLinkLayer != null) {
 					handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
-				else
+				} else {
 					debugLog("ERROR: Neither primary nor secondary link layer available!");
+				}
 			}
-		} else
+		} else {
 			debugLog("Message ignored because of raw message handler");
+		}
 	}
 
 	public void handleMessageBalancedAndPrimaryUnbalanced(byte[] msg, int msgSize) throws Exception {
@@ -124,7 +140,7 @@ public class LinkLayer {
 				return;
 			}
 
-			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
+			userDataLength = msg[1] - linkLayerParameters.getAddressLength() - 1;
 			userDataStart = 5 + linkLayerParameters.getAddressLength();
 
 			csStart = 4;
@@ -138,21 +154,25 @@ public class LinkLayer {
 
 			c = msg[4];
 
-			if (linkLayerParameters.getAddressLength() > 0)
+			if (linkLayerParameters.getAddressLength() > 0) {
 				address += msg[5];
+			}
 
-			if (linkLayerParameters.getAddressLength() > 1)
+			if (linkLayerParameters.getAddressLength() > 1) {
 				address += msg[6] * 0x100;
+			}
 		} else if (msg[0] == 0x10) {
 			c = msg[1];
 			csStart = 1;
 			csIndex = 2 + linkLayerParameters.getAddressLength();
 
-			if (linkLayerParameters.getAddressLength() > 0)
+			if (linkLayerParameters.getAddressLength() > 0) {
 				address += msg[2];
+			}
 
-			if (linkLayerParameters.getAddressLength() > 1)
+			if (linkLayerParameters.getAddressLength() > 1) {
 				address += msg[3] * 0x100;
+			}
 
 		} else if (msg[0] == 0xe5) {
 			isAck = true;
@@ -169,8 +189,9 @@ public class LinkLayer {
 			// check checksum
 			byte checksum = 0;
 
-			for (int i = csStart; i < csIndex; i++)
+			for (int i = csStart; i < csIndex; i++) {
 				checksum += msg[i];
+			}
 
 			if (checksum != msg[csIndex]) {
 				debugLog("ERROR: checksum invalid!");
@@ -190,10 +211,11 @@ public class LinkLayer {
 
 				FunctionCodePrimary fcp = FunctionCodePrimary.get(fc);
 
-				if (secondaryLinkLayer != null)
+				if (secondaryLinkLayer != null) {
 					secondaryLinkLayer.handleMessage(fcp, false, address, fcb, fcv, msg, userDataStart, userDataLength);
-				else
+				} else {
 					debugLog("No secondary link layer available!");
+				}
 
 			} else { /* we are primary link layer */
 				boolean dir = ((c & 0x80) == 0x80); /* DIR - direction for balanced transmission */
@@ -208,18 +230,21 @@ public class LinkLayer {
 
 				if (primaryLinkLayer != null) {
 
-					if (linkLayerMode == LinkLayerMode.BALANCED)
+					if (linkLayerMode == LinkLayerMode.BALANCED) {
 						primaryLinkLayer.handleMessage(fcs, dir, dfc, address, msg, userDataStart, userDataLength);
-					else
+					} else {
 						primaryLinkLayer.handleMessage(fcs, acd, dfc, address, msg, userDataStart, userDataLength);
-				} else
+					}
+				} else {
 					debugLog("No primary link layer available!");
+				}
 
 			}
 
 		} else { /* Single byte ACK */
-			if (primaryLinkLayer != null)
+			if (primaryLinkLayer != null) {
 				primaryLinkLayer.handleMessage(FunctionCodeSecondary.ACK, false, false, -1, null, 0, 0);
+			}
 		}
 
 	}
@@ -246,7 +271,7 @@ public class LinkLayer {
 				return;
 			}
 
-			userDataLength = (int) msg[1] - linkLayerParameters.getAddressLength() - 1;
+			userDataLength = msg[1] - linkLayerParameters.getAddressLength() - 1;
 			userDataStart = 5 + linkLayerParameters.getAddressLength();
 
 			csStart = 4;
@@ -278,11 +303,13 @@ public class LinkLayer {
 			if (linkLayerParameters.getAddressLength() > 1) {
 				address += (msg[csStart + 2] * 0x100);
 
-				if (address == 65535)
+				if (address == 65535) {
 					isBroadcast = true;
+				}
 			} else {
-				if (address == 255)
+				if (address == 255) {
 					isBroadcast = true;
+				}
 			}
 		}
 
@@ -305,8 +332,9 @@ public class LinkLayer {
 		// check checksum
 		byte checksum = 0;
 
-		for (int i = csStart; i < csIndex; i++)
+		for (int i = csStart; i < csIndex; i++) {
 			checksum += msg[i];
+		}
 
 		if (checksum != msg[csIndex]) {
 			debugLog("ERROR: checksum invalid!");
@@ -327,10 +355,11 @@ public class LinkLayer {
 		debugLog("PRM=" + (prm == true ? "1" : "0") + " FCB=" + (fcb == true ? "1" : "0") + " FCV="
 				+ (fcv == true ? "1" : "0") + " FC=" + fc + "(" + fcp.toString() + ")");
 
-		if (secondaryLinkLayer != null)
+		if (secondaryLinkLayer != null) {
 			secondaryLinkLayer.handleMessage(fcp, isBroadcast, address, fcb, fcv, msg, userDataStart, userDataLength);
-		else
+		} else {
 			debugLog("No secondary link layer available!");
+		}
 	}
 
 	public void run() {
@@ -351,10 +380,11 @@ public class LinkLayer {
 				secondaryLinkLayer.runStateMachine();
 			} else {
 				// TODO avoid redirection by LinkLayer class
-				if (primaryLinkLayer != null)
+				if (primaryLinkLayer != null) {
 					primaryLinkLayer.runStateMachine();
-				else if (secondaryLinkLayer != null)
+				} else if (secondaryLinkLayer != null) {
 					secondaryLinkLayer.runStateMachine();
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -370,38 +400,45 @@ public class LinkLayer {
 
 		byte c = fc;
 
-		if (prm)
+		if (prm) {
 			c += 0x40;
+		}
 
-		if (dir)
+		if (dir) {
 			c += 0x80;
+		}
 
-		if (acd)
+		if (acd) {
 			c += 0x20;
+		}
 
-		if (dfc)
+		if (dfc) {
 			c += 0x10;
+		}
 
-		buffer[bufPos++] = (byte) c;
+		buffer[bufPos++] = c;
 
 		if (linkLayerParameters.getAddressLength() > 0) {
 			buffer[bufPos++] = (byte) (address % 0x100);
 
-			if (linkLayerParameters.getAddressLength() > 1)
+			if (linkLayerParameters.getAddressLength() > 1) {
 				buffer[bufPos++] = (byte) ((address / 0x100) % 0x100);
+			}
 		}
 
 		byte checksum = 0;
 
-		for (int i = 1; i < bufPos; i++)
+		for (int i = 1; i < bufPos; i++) {
 			checksum += buffer[i];
+		}
 
 		buffer[bufPos++] = checksum;
 
 		buffer[bufPos++] = 0x16; /* END */
 
-		if (sentRawMessageHandler != null)
+		if (sentRawMessageHandler != null) {
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
+		}
 
 		transceiver.sendMessage(buffer, bufPos);
 	}
@@ -417,15 +454,17 @@ public class LinkLayer {
 	}
 
 	public void sendSingleCharACK() throws IOException {
-		if (sentRawMessageHandler != null)
+		if (sentRawMessageHandler != null) {
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, SINGLE_CHAR_ACK, 1);
+		}
 
 		transceiver.sendMessage(SINGLE_CHAR_ACK, 1);
 	}
 
 	public void sendTestFunction() {
-		if (primaryLinkLayer != null)
+		if (primaryLinkLayer != null) {
 			primaryLinkLayer.sendLinkLayerTestFunction();
+		}
 	}
 
 	public void sendVariableLengthFramePrimary(FunctionCodePrimary fc, int address, boolean fcb, boolean fcv,
@@ -435,16 +474,19 @@ public class LinkLayer {
 
 		byte c = (byte) fc.getValue();
 
-		if (dir)
+		if (dir) {
 			c += 0x80;
+		}
 
 		c += 0x40; // PRM = 1;
 
-		if (fcv)
+		if (fcv) {
 			c += 0x10;
+		}
 
-		if (fcb)
+		if (fcb) {
 			c += 0x20;
+		}
 
 		buffer[4] = c;
 
@@ -453,35 +495,40 @@ public class LinkLayer {
 		if (linkLayerParameters.getAddressLength() > 0) {
 			buffer[bufPos++] = (byte) (address % 0x100);
 
-			if (linkLayerParameters.getAddressLength() > 1)
+			if (linkLayerParameters.getAddressLength() > 1) {
 				buffer[bufPos++] = (byte) ((address / 0x100) % 0x100);
+			}
 		}
 
 		byte[] userData = frame.getBuffer();
 		int userDataLength = frame.getMsgSize();
 
-		for (int i = 0; i < userDataLength; i++)
+		for (int i = 0; i < userDataLength; i++) {
 			buffer[bufPos++] = userData[i];
+		}
 
 		int l = 1 + linkLayerParameters.getAddressLength() + frame.getMsgSize();
 
-		if (l > 255)
+		if (l > 255) {
 			return;
+		}
 
 		buffer[1] = (byte) l;
 		buffer[2] = (byte) l;
 
 		byte checksum = 0;
 
-		for (int i = 4; i < bufPos; i++)
+		for (int i = 4; i < bufPos; i++) {
 			checksum += buffer[i];
+		}
 
 		buffer[bufPos++] = checksum;
 
 		buffer[bufPos++] = 0x16; /* END */
 
-		if (sentRawMessageHandler != null)
+		if (sentRawMessageHandler != null) {
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
+		}
 
 		transceiver.sendMessage(buffer, bufPos);
 	}
@@ -491,18 +538,21 @@ public class LinkLayer {
 		buffer[0] = 0x68; /* START */
 		buffer[3] = 0x68; /* START */
 
-		byte c = (byte) ((int) fc.getValue() & 0x1f);
+		byte c = (byte) (fc.getValue() & 0x1f);
 
 		if (linkLayerMode == LinkLayerMode.BALANCED) {
-			if (dir)
+			if (dir) {
 				c += 0x80;
+			}
 		}
 
-		if (acd)
+		if (acd) {
 			c += 0x20;
+		}
 
-		if (dfc)
+		if (dfc) {
 			c += 0x10;
+		}
 
 		buffer[4] = c;
 
@@ -511,8 +561,9 @@ public class LinkLayer {
 		if (linkLayerParameters.getAddressLength() > 0) {
 			buffer[bufPos++] = (byte) (address % 0x100);
 
-			if (linkLayerParameters.getAddressLength() > 1)
+			if (linkLayerParameters.getAddressLength() > 1) {
 				buffer[bufPos++] = (byte) ((address / 0x100) % 0x100);
+			}
 		}
 
 		byte[] userData = frame.getBuffer();
@@ -520,26 +571,30 @@ public class LinkLayer {
 
 		int l = 1 + linkLayerParameters.getAddressLength() + userDataLength;
 
-		if (l > 255)
+		if (l > 255) {
 			return;
+		}
 
 		buffer[1] = (byte) l;
 		buffer[2] = (byte) l;
 
-		for (int i = 0; i < userDataLength; i++)
+		for (int i = 0; i < userDataLength; i++) {
 			buffer[bufPos++] = userData[i];
+		}
 
 		byte checksum = 0;
 
-		for (int i = 4; i < bufPos; i++)
+		for (int i = 4; i < bufPos; i++) {
 			checksum += buffer[i];
+		}
 
 		buffer[bufPos++] = checksum;
 
 		buffer[bufPos++] = 0x16; /* END */
 
-		if (sentRawMessageHandler != null)
+		if (sentRawMessageHandler != null) {
 			sentRawMessageHandler.invoke(sentRawMessageHandlerParameter, buffer, bufPos);
+		}
 
 		transceiver.sendMessage(buffer, bufPos);
 	}

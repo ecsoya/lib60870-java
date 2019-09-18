@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.cs104;
 
 import java.io.IOException;
@@ -12,7 +28,8 @@ import java.util.List;
 
 import org.ecsoya.iec60870.asdu.ASDU;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
-import org.ecsoya.iec60870.conn.Slave;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.Slave;
 
 /// <summary>
 /// This class represents a single IEC 60870-5 server (slave or controlled station). It is also the
@@ -74,8 +91,9 @@ public class Server extends Slave {
 		this.alParameters = alParameters;
 		this.securityInfo = securityInfo;
 
-		if (securityInfo != null)
+		if (securityInfo != null) {
 			this.localPort = 19998;
+		}
 	}
 
 	public Server(TlsSecurityInformation securityInfo) {
@@ -84,14 +102,16 @@ public class Server extends Slave {
 
 		this.securityInfo = securityInfo;
 
-		if (securityInfo != null)
+		if (securityInfo != null) {
 			this.localPort = 19998;
+		}
 	}
 
-	void Activated(ClientConnection activeConnection) {
-		if (connectionEventHandler != null)
+	void activated(ClientConnection activeConnection) {
+		if (connectionEventHandler != null) {
 			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
 					ClientConnectionEvent.ACTIVE);
+		}
 
 		// deactivate all other connections
 
@@ -100,9 +120,10 @@ public class Server extends Slave {
 
 				if (connection.isActive()) {
 
-					if (connectionEventHandler != null)
+					if (connectionEventHandler != null) {
 						connectionEventHandler.invoke(connectionEventHandlerParameter, connection,
 								ClientConnectionEvent.INACTIVE);
+					}
 
 					connection.setActive(false);
 				}
@@ -110,13 +131,14 @@ public class Server extends Slave {
 		}
 	}
 
-	void Deactivated(ClientConnection activeConnection) {
-		if (connectionEventHandler != null)
+	void deactivated(ClientConnection activeConnection) {
+		if (connectionEventHandler != null) {
 			connectionEventHandler.invoke(connectionEventHandlerParameter, activeConnection,
 					ClientConnectionEvent.INACTIVE);
+		}
 	}
 
-	private void DebugLog(String msg) {
+	private void debugLog(String msg) {
 		if (debugOutput) {
 			System.out.print("CS104 SLAVE: ");
 			System.out.println(msg);
@@ -130,25 +152,26 @@ public class Server extends Slave {
 	/// immediately. Otherwhise
 	/// the ASDU will be added to the transmission queue for later transmission.
 	/// <param name="asdu">ASDU to be sent</param>
-	public void EnqueueASDU(ASDU asdu) {
+	public void enqueueASDU(ASDU asdu) {
 		if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
 			asduQueue.enqueueAsdu(asdu);
 
 			for (ClientConnection connection : allOpenConnections) {
-				if (connection.isActive())
-					connection.ASDUReadyToSend();
+				if (connection.isActive()) {
+					connection.aSDUReadyToSend();
+				}
 			}
 		} else {
 			for (ClientConnection connection : allOpenConnections) {
 				if (connection.isActive()) {
-					connection.GetASDUQueue().enqueueAsdu(asdu);
-					connection.ASDUReadyToSend();
+					connection.getASDUQueue().enqueueAsdu(asdu);
+					connection.aSDUReadyToSend();
 				}
 			}
 		}
 	}
 
-	public ApplicationLayerParameters GetApplicationLayerParameters() {
+	public ApplicationLayerParameters getApplicationLayerParameters() {
 		return alParameters;
 	}
 
@@ -168,22 +191,24 @@ public class Server extends Slave {
 		return serverMode;
 	}
 
-	void MarkASDUAsConfirmed(int index, long timestamp) {
-		if (asduQueue != null)
+	void markASDUAsConfirmed(int index, long timestamp) {
+		if (asduQueue != null) {
 			asduQueue.markASDUAsConfirmed(index, timestamp);
+		}
 	}
 
-	public void Remove(ClientConnection connection) {
-		if (connectionEventHandler != null)
+	public void remove(ClientConnection connection) {
+		if (connectionEventHandler != null) {
 			connectionEventHandler.invoke(connectionEventHandlerParameter, connection, ClientConnectionEvent.CLOSED);
+		}
 
 		allOpenConnections.remove(connection);
 	}
 
-	private void ServerAcceptThread() {
+	private void serverAcceptThread() {
 		running = true;
 
-		DebugLog("Waiting for connections...");
+		debugLog("Waiting for connections...");
 
 		while (running) {
 
@@ -192,15 +217,16 @@ public class Server extends Slave {
 				Socket newSocket = listeningSocket.accept();
 
 				if (newSocket != null) {
-					DebugLog("New connection");
+					debugLog("New connection");
 					SocketAddress ipEndPoint = newSocket.getRemoteSocketAddress();
 
-					DebugLog("  from IP: " + ipEndPoint.toString());
+					debugLog("  from IP: " + ipEndPoint.toString());
 
 					boolean acceptConnection = true;
 
-					if (getOpenConnectionsCount() >= maxOpenConnections)
+					if (getOpenConnectionsCount() >= maxOpenConnections) {
 						acceptConnection = false;
+					}
 
 					if (acceptConnection && (connectionRequestHandler != null)) {
 						acceptConnection = connectionRequestHandler.invoke(connectionRequestHandlerParameter,
@@ -211,22 +237,25 @@ public class Server extends Slave {
 
 						ClientConnection connection;
 
-						if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP)
+						if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
 							connection = new ClientConnection(newSocket, securityInfo, apciParameters, alParameters,
 									this, asduQueue, debugOutput);
-						else
+						} else {
 							connection = new ClientConnection(newSocket, securityInfo, apciParameters, alParameters,
-									this, new ASDUQueue(maxQueueSize, alParameters, (msg) -> DebugLog(msg)),
+									this, new ASDUQueue(maxQueueSize, alParameters, (msg) -> debugLog(msg)),
 									debugOutput);
+						}
 
 						allOpenConnections.add(connection);
 
-						if (connectionEventHandler != null)
+						if (connectionEventHandler != null) {
 							connectionEventHandler.invoke(connectionEventHandlerParameter, connection,
 									ClientConnectionEvent.OPENED);
+						}
 
-					} else
+					} else {
 						newSocket.close();
+					}
 				}
 
 			} catch (Exception e) {
@@ -243,7 +272,7 @@ public class Server extends Slave {
 	/// </summary>
 	/// <param name="handler">Handler.</param>
 	/// <param name="parameter">Parameter.</param>
-	public void SetConnectionEventHandler(ConnectionEventHandler handler, Object parameter) {
+	public void setConnectionEventHandler(ConnectionEventHandler handler, Object parameter) {
 		this.connectionEventHandler = handler;
 		this.connectionEventHandlerParameter = parameter;
 	}
@@ -256,7 +285,7 @@ public class Server extends Slave {
 	/// </summary>
 	/// <param name="handler">Handler.</param>
 	/// <param name="parameter">Parameter.</param>
-	public void SetConnectionRequestHandler(ConnectionRequestHandler handler, Object parameter) {
+	public void setConnectionRequestHandler(ConnectionRequestHandler handler, Object parameter) {
 		this.connectionRequestHandler = handler;
 		this.connectionRequestHandlerParameter = parameter;
 	}
@@ -266,7 +295,7 @@ public class Server extends Slave {
 	/// all interfaces
 	/// </summary>
 	/// <param name="localAddress">Local IP address or hostname to bind.</param>
-	public void SetLocalAddress(String localAddress) {
+	public void setLocalAddress(String localAddress) {
 		this.localHostname = localAddress;
 	}
 
@@ -274,7 +303,7 @@ public class Server extends Slave {
 	/// Sets the local TCP port to bind to. Default is 2404.
 	/// </summary>
 	/// <param name="tcpPort">Local TCP port to bind.</param>
-	public void SetLocalPort(int tcpPort) {
+	public void setLocalPort(int tcpPort) {
 		this.localPort = tcpPort;
 	}
 
@@ -289,27 +318,31 @@ public class Server extends Slave {
 	/// <summary>
 	/// Start the server. Listen to client connections.
 	/// </summary>
-	public void Start() {
+	@Override
+	public void run() throws ConnectionException {
+		SocketAddress localEp = null;
 		try {
 			InetAddress ipAddress = InetAddress.getByName(localHostname);
-			SocketAddress localEP = new InetSocketAddress(ipAddress, localPort);
-
+			localEp = new InetSocketAddress(ipAddress, localPort);
+		} catch (UnknownHostException e) {
+			throw new ConnectionException("", e);
+		}
+		try {
 			// Create a TCP/IP socket.
 			listeningSocket = new ServerSocket();
 
-			listeningSocket.bind(localEP);
+			listeningSocket.bind(localEp);
 
 //		listeningSocket.Listen(100);
 
-			Thread acceptThread = new Thread(() -> ServerAcceptThread());
+			Thread acceptThread = new Thread(() -> serverAcceptThread());
 
-			if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP)
-				asduQueue = new ASDUQueue(maxQueueSize, alParameters, (msg) -> DebugLog(msg));
+			if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
+				asduQueue = new ASDUQueue(maxQueueSize, alParameters, (msg) -> debugLog(msg));
+			}
 
 			acceptThread.start();
-		} catch (UnknownHostException e) {
 
-			e.printStackTrace();
 		} catch (IOException e) {
 
 			e.printStackTrace();
@@ -319,7 +352,8 @@ public class Server extends Slave {
 	/// <summary>
 	/// Stop the server. Close all open client connections.
 	/// </summary>
-	public void Stop() {
+	@Override
+	public void stop() {
 		running = false;
 
 		try {
@@ -327,7 +361,7 @@ public class Server extends Slave {
 
 			// close all open connection
 			for (ClientConnection connection : allOpenConnections) {
-				connection.Close();
+				connection.stop();
 			}
 
 		} catch (Exception e) {
@@ -342,8 +376,9 @@ public class Server extends Slave {
 		}
 	}
 
-	void UnmarkAllASDUs() {
-		if (asduQueue != null)
+	void unmarkAllASDUs() {
+		if (asduQueue != null) {
 			asduQueue.unmarkAllASDUs();
+		}
 	}
 }

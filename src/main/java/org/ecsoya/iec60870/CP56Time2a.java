@@ -1,21 +1,42 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870;
 
 import java.time.LocalDateTime;
+
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 
 public class CP56Time2a {
 	private byte[] encodedValue = new byte[7];
 
 	public CP56Time2a() {
-		for (int i = 0; i < 7; i++)
+		for (int i = 0; i < 7; i++) {
 			encodedValue[i] = 0;
+		}
 	}
 
 	public CP56Time2a(byte[] msg, int startIndex) throws ASDUParsingException {
-		if (msg.length < startIndex + 7)
+		if (msg.length < startIndex + 7) {
 			throw new ASDUParsingException("Message too small for parsing CP56Time2a");
+		}
 
-		for (int i = 0; i < 7; i++)
+		for (int i = 0; i < 7; i++) {
 			encodedValue[i] = msg[startIndex + i];
+		}
 	}
 
 	public CP56Time2a(LocalDateTime time) {
@@ -40,8 +61,9 @@ public class CP56Time2a {
 	public LocalDateTime getDateTime(int startYear) {
 		int baseYear = (startYear / 100) * 100;
 
-		if (this.getYear() < (startYear % 100))
+		if (this.getYear() < (startYear % 100)) {
 			baseYear += 100;
+		}
 
 		LocalDateTime value = LocalDateTime.of(baseYear + getYear(), getMonth(), getDayOfMonth(), getHour(),
 				getMinute(), getSecond(), getMillisecond());
@@ -152,10 +174,11 @@ public class CP56Time2a {
 	}
 
 	public void setInvalid(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] |= 0x80;
-		else
+		} else {
 			encodedValue[2] &= 0x7f;
+		}
 	}
 
 	public void setMillisecond(int value) {
@@ -185,17 +208,19 @@ public class CP56Time2a {
 	}
 
 	public void setSubstituted(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] |= 0x40;
-		else
+		} else {
 			encodedValue[2] &= 0xbf;
+		}
 	}
 
 	public void setSummerTime(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[3] |= 0x80;
-		else
+		} else {
 			encodedValue[3] &= 0x7f;
+		}
 	}
 
 	public void setYear(int value) {
@@ -205,6 +230,7 @@ public class CP56Time2a {
 		encodedValue[6] = (byte) ((encodedValue[6] & 0x80) + (value & 0x7f));
 	}
 
+	@Override
 	public String
 
 			toString() {

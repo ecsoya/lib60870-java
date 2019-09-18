@@ -1,9 +1,19 @@
-//====================================================================================================
-//The Free Edition of C# to Java Converter limits conversion output to 100 lines per file.
-
-//To subscribe to the Premium Edition, visit our website:
-//https://www.tangiblesoftwaresolutions.com/order/order-csharp-to-java.html
-//====================================================================================================
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 
 package org.ecsoya.iec60870.cs101;
 
@@ -11,9 +21,9 @@ import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.asdu.ASDU;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.ie.ClockSynchronizationCommand;
@@ -22,9 +32,9 @@ import org.ecsoya.iec60870.asdu.ie.DelayAcquisitionCommand;
 import org.ecsoya.iec60870.asdu.ie.InterrogationCommand;
 import org.ecsoya.iec60870.asdu.ie.ReadCommand;
 import org.ecsoya.iec60870.asdu.ie.ResetProcessCommand;
-import org.ecsoya.iec60870.conn.FileServer;
-import org.ecsoya.iec60870.conn.IMasterConnection;
-import org.ecsoya.iec60870.conn.Slave;
+import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.Slave;
+import org.ecsoya.iec60870.core.file.FileServer;
 import org.ecsoya.iec60870.layer.ISecondaryApplicationLayer;
 import org.ecsoya.iec60870.layer.LinkLayer;
 import org.ecsoya.iec60870.layer.LinkLayerMode;
@@ -36,29 +46,6 @@ import org.ecsoya.iec60870.layer.SecondaryLinkLayerUnbalanced;
 import org.ecsoya.iec60870.layer.SerialTransceiverFT12;
 import org.ecsoya.iec60870.serial.SerialPort;
 import org.ecsoya.iec60870.serial.SerialStream;
-
-/*
- *  CS101Slave.cs
- *
- *  Copyright 2017 MZ Automation GmbH
- *
- *  This file is part of lib60870.NET
- *
- *  lib60870.NET is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  lib60870.NET is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with lib60870.NET.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  See COPYING file for the complete license text.
- */
 
 /**
  * CS 101 slave implementation (implements Slave interface)
@@ -117,8 +104,9 @@ public class CS101Slave extends Slave
 
 		linkLayerParameters = parameters;
 
-		if (linkLayerParameters == null)
+		if (linkLayerParameters == null) {
 			linkLayerParameters = new LinkLayerParameters();
+		}
 
 		transceiver = new SerialTransceiverFT12(port, linkLayerParameters, DebugLog);
 
@@ -137,8 +125,9 @@ public class CS101Slave extends Slave
 	public CS101Slave(SerialStream serialStream, LinkLayerParameters parameters) {
 		linkLayerParameters = parameters;
 
-		if (linkLayerParameters == null)
+		if (linkLayerParameters == null) {
 			linkLayerParameters = new LinkLayerParameters();
+		}
 
 		transceiver = new SerialTransceiverFT12(serialStream, linkLayerParameters, DebugLog);
 
@@ -147,7 +136,7 @@ public class CS101Slave extends Slave
 		fileServer = new FileServer(this, getAvailableFiles(), DebugLog);
 	}
 
-	public final BufferFrame DequeueUserDataClass1() {
+	public final BufferFrame dequeueUserDataClass1() {
 		synchronized (userDataClass1Queue) {
 
 			if (!userDataClass1Queue.isEmpty()) {
@@ -160,23 +149,24 @@ public class CS101Slave extends Slave
 
 	private BufferFrame
 
-			DequeueUserDataClass2() {
+			dequeueUserDataClass2() {
 		synchronized (userDataClass2Queue) {
 
-			if (userDataClass2Queue.size() > 0)
+			if (userDataClass2Queue.size() > 0) {
 				return userDataClass2Queue.pop();
-			else
+			} else {
 				return null;
+			}
 		}
 	}
 
 	/**
 	 * Enqueues an ASDU into the class 1 queue (for events, command responses, and
 	 * other high-priority messages).
-	 * 
+	 *
 	 * @param asdu ASDU to enqueue
 	 */
-	public final void EnqueueUserDataClass1(ASDU asdu) {
+	public final void enqueueUserDataClass1(ASDU asdu) {
 		synchronized (userDataClass1Queue) {
 
 			BufferFrame frame = new BufferFrame(new byte[256], 0);
@@ -196,7 +186,7 @@ public class CS101Slave extends Slave
 	/// background scan, and other low-priority data).
 	/// </summary>
 	/// <param name="asdu">ASDU to enqueue</param>
-	public void EnqueueUserDataClass2(ASDU asdu) {
+	public void enqueueUserDataClass2(ASDU asdu) {
 		synchronized (userDataClass2Queue) {
 
 			BufferFrame frame = new BufferFrame(new byte[256], 0);
@@ -211,19 +201,22 @@ public class CS101Slave extends Slave
 		}
 	}
 
+	@Override
 	public final ApplicationLayerParameters getApplicationLayerParameters() {
 		return parameters;
 	}
 
+	@Override
 	public final BufferFrame getClass1Data() {
-		return DequeueUserDataClass1();
+		return dequeueUserDataClass1();
 	}
 
+	@Override
 	public final BufferFrame getCLass2Data() {
-		BufferFrame asdu = DequeueUserDataClass2();
+		BufferFrame asdu = dequeueUserDataClass2();
 
 		if (asdu == null) {
-			asdu = DequeueUserDataClass1();
+			asdu = dequeueUserDataClass1();
 		}
 
 		return asdu;
@@ -232,7 +225,7 @@ public class CS101Slave extends Slave
 	/**
 	 * Gets or sets the direction bit value used for balanced mode (default is
 	 * false)
-	 * 
+	 *
 	 * <value><c>true</c> if DIR is set otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getDIR() {
@@ -254,7 +247,7 @@ public class CS101Slave extends Slave
 
 	/**
 	 * Gets or sets the link layer mode (balanced or unbalanced).
-	 * 
+	 *
 	 * <value>The link layer mode.</value>
 	 */
 	public final LinkLayerMode getLinkLayerMode() {
@@ -263,7 +256,7 @@ public class CS101Slave extends Slave
 
 	/**
 	 * Gets or sets the application layer parameters-
-	 * 
+	 *
 	 * Should be set before starting the communication <value>application layer
 	 * parameters.</value>
 	 */
@@ -273,12 +266,13 @@ public class CS101Slave extends Slave
 
 	private Function<Void, BufferFrame> getUserData() {
 		return (v) -> {
-			if (IsUserDataClass1Available())
-				return DequeueUserDataClass1();
-			else if (IsUserDataClass2Available())
-				return DequeueUserDataClass2();
-			else
+			if (isUserDataClass1Available()) {
+				return dequeueUserDataClass1();
+			} else if (isUserDataClass2Available()) {
+				return dequeueUserDataClass2();
+			} else {
 				return null;
+			}
 		};
 
 	}
@@ -320,8 +314,10 @@ public class CS101Slave extends Slave
 
 					InterrogationCommand irc = (InterrogationCommand) asdu.getElement(0);
 
-					if (this.interrogationHandler.invoke(this.InterrogationHandlerParameter, this, asdu, irc.getQOI()))
+					if (this.interrogationHandler.invoke(this.InterrogationHandlerParameter, this, asdu,
+							irc.getQOI())) {
 						messageHandled = true;
+					}
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
@@ -341,8 +337,9 @@ public class CS101Slave extends Slave
 					CounterInterrogationCommand cic = (CounterInterrogationCommand) asdu.getElement(0);
 
 					if (this.counterInterrogationHandler.invoke(this.counterInterrogationHandlerParameter, this, asdu,
-							cic.getQualifier()))
+							cic.getQualifier())) {
 						messageHandled = true;
+					}
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
@@ -362,8 +359,9 @@ public class CS101Slave extends Slave
 				if (this.readHandler != null) {
 					ReadCommand rc = (ReadCommand) asdu.getElement(0);
 
-					if (this.readHandler.invoke(this.readHandlerParameter, this, asdu, rc.getObjectAddress()))
+					if (this.readHandler.invoke(this.readHandlerParameter, this, asdu, rc.getObjectAddress())) {
 						messageHandled = true;
+					}
 
 				}
 
@@ -385,8 +383,9 @@ public class CS101Slave extends Slave
 					ClockSynchronizationCommand csc = (ClockSynchronizationCommand) asdu.getElement(0);
 
 					if (this.clockSynchronizationHandler.invoke(this.clockSynchronizationHandlerParameter, this, asdu,
-							csc.getNewTime()))
+							csc.getNewTime())) {
 						messageHandled = true;
+					}
 				}
 
 			} else {
@@ -400,10 +399,11 @@ public class CS101Slave extends Slave
 
 			DebugLog.accept("Rcvd test command C_TS_NA_1");
 
-			if (asdu.getCauseOfTransmission() != CauseOfTransmission.ACTIVATION)
+			if (asdu.getCauseOfTransmission() != CauseOfTransmission.ACTIVATION) {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
-			else
+			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
+			}
 
 			this.sendASDU(asdu);
 
@@ -421,8 +421,9 @@ public class CS101Slave extends Slave
 
 					ResetProcessCommand rpc = (ResetProcessCommand) asdu.getElement(0);
 
-					if (this.resetProcessHandler.invoke(this.resetProcessHandlerParameter, this, asdu, rpc.getQrp()))
+					if (this.resetProcessHandler.invoke(this.resetProcessHandlerParameter, this, asdu, rpc.getQrp())) {
 						messageHandled = true;
+					}
 				}
 
 			} else {
@@ -443,8 +444,9 @@ public class CS101Slave extends Slave
 					DelayAcquisitionCommand dac = (DelayAcquisitionCommand) asdu.getElement(0);
 
 					if (this.delayAcquisitionHandler.invoke(this.delayAcquisitionHandlerParameter, this, asdu,
-							dac.getDelay()))
+							dac.getDelay())) {
 						messageHandled = true;
+					}
 				}
 			} else {
 				asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_CAUSE_OF_TRANSMISSION);
@@ -455,12 +457,15 @@ public class CS101Slave extends Slave
 
 		}
 
-		if (messageHandled == false)
+		if (messageHandled == false) {
 			messageHandled = fileServer.handleFileAsdu(asdu);
+		}
 
-		if ((messageHandled == false) && (this.asduHandler != null))
-			if (this.asduHandler.invoke(this.asduHandlerParameter, this, asdu))
+		if ((messageHandled == false) && (this.asduHandler != null)) {
+			if (this.asduHandler.invoke(this.asduHandlerParameter, this, asdu)) {
 				messageHandled = true;
+			}
+		}
 
 		if (messageHandled == false) {
 			asdu.setCauseOfTransmission(CauseOfTransmission.UNKNOWN_TYPE_ID);
@@ -470,6 +475,7 @@ public class CS101Slave extends Slave
 		return true;
 	}
 
+	@Override
 	public final boolean handleReceivedData(byte[] msg, boolean isBroadcast, int userDataStart, int userDataLength) {
 		try {
 			return handleApplicationLayer(0, msg, userDataStart, userDataLength);
@@ -484,11 +490,12 @@ public class CS101Slave extends Slave
 	 * ISecondaryApplicationLayer
 	 ********************************************/
 
+	@Override
 	public final boolean isClass1DataAvailable() {
-		return IsUserDataClass1Available();
+		return isUserDataClass1Available();
 	}
 
-	public final boolean IsUserDataClass1Available() {
+	public final boolean isUserDataClass1Available() {
 		synchronized (userDataClass1Queue) {
 			if (!userDataClass1Queue.isEmpty()) {
 				return true;
@@ -500,14 +507,14 @@ public class CS101Slave extends Slave
 
 	/**
 	 * Determines whether the user data class 1 queue is full.
-	 * 
+	 *
 	 * @return <c>true</c> if the queue is full; otherwise, <c>false</c>.
 	 */
-	public final boolean IsUserDataClass1QueueFull() {
+	public final boolean isUserDataClass1QueueFull() {
 		return (userDataClass1Queue.size() == userDataClass1QueueMaxSize);
 	}
 
-	public final boolean IsUserDataClass2Available() {
+	public final boolean isUserDataClass2Available() {
 		synchronized (userDataClass2Queue) {
 			if (!userDataClass2Queue.isEmpty()) {
 				return true;
@@ -522,7 +529,7 @@ public class CS101Slave extends Slave
 	/// </summary>
 	/// <returns><c>true</c> if the queue is full; otherwise,
 	/// <c>false</c>.</returns>
-	public boolean IsUserDataClass2QueueFull() {
+	public boolean isUserDataClass2QueueFull() {
 		return (userDataClass2Queue.size() == userDataClass2QueueMaxSize);
 	}
 
@@ -549,6 +556,7 @@ public class CS101Slave extends Slave
 //			port.Close();
 	}
 
+	@Override
 	public final void resetCUReceived(boolean onlyFcb) {
 		// TODO delete data queues
 		synchronized (userDataClass1Queue) {
@@ -563,6 +571,7 @@ public class CS101Slave extends Slave
 	/// Run a the message receiver and state machines once. Can be used if no
 	/// threads should be used.
 	/// </summary>
+	@Override
 	public void run() {
 		if (initialized == false) {
 
@@ -587,8 +596,9 @@ public class CS101Slave extends Slave
 			initialized = true;
 		}
 
-		if (fileServer != null)
+		if (fileServer != null) {
 			fileServer.handleFileTransmission();
+		}
 
 		linkLayer.run();
 	}
@@ -597,6 +607,7 @@ public class CS101Slave extends Slave
 	 * IASDUSender
 	 ********************************************/
 
+	@Override
 	public final void sendACT_CON(ASDU asdu, boolean negative) {
 		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_CON);
 		asdu.setNegative(negative);
@@ -604,6 +615,7 @@ public class CS101Slave extends Slave
 		sendASDU(asdu);
 	}
 
+	@Override
 	public final void sendACT_TERM(ASDU asdu) {
 		asdu.setCauseOfTransmission(CauseOfTransmission.ACTIVATION_TERMINATION);
 		asdu.setNegative(false);
@@ -611,8 +623,9 @@ public class CS101Slave extends Slave
 		sendASDU(asdu);
 	}
 
+	@Override
 	public void sendASDU(ASDU asdu) {
-		EnqueueUserDataClass1(asdu);
+		enqueueUserDataClass1(asdu);
 	}
 
 	/// <summary>
@@ -632,8 +645,9 @@ public class CS101Slave extends Slave
 
 	public void setLinkLayerAddressOtherStation(int value) {
 		this.linkLayerAddressOtherStation = value;
-		if (primaryLinkLayerBalanced != null)
+		if (primaryLinkLayerBalanced != null) {
 			primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(value);
+		}
 	}
 
 	public final void setLinkLayerMode(LinkLayerMode value) {
@@ -649,11 +663,11 @@ public class CS101Slave extends Slave
 	/**
 	 * Sets the user data queue sizes. When the maximum size is reached the oldest
 	 * value will be deleted when a new ASDU is added
-	 * 
+	 *
 	 * @param class1QueueSize Class 1 queue size.
 	 * @param class2QueueSize Class 2 queue size.
 	 */
-	public final void SetUserDataQueueSizes(int class1QueueSize, int class2QueueSize) {
+	public final void setUserDataQueueSizes(int class1QueueSize, int class2QueueSize) {
 		userDataClass1QueueMaxSize = class1QueueSize;
 		userDataClass2QueueMaxSize = class2QueueSize;
 	}
@@ -661,7 +675,8 @@ public class CS101Slave extends Slave
 	/**
 	 * Stops the receive message loop
 	 */
-	public final void Stop() {
+	@Override
+	public final void stop() {
 		running = false;
 	}
 

@@ -1,6 +1,19 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
@@ -61,6 +74,7 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		return state;
 	}
 
+	@Override
 	public void handleMessage(FunctionCodeSecondary fcs, boolean dir, boolean dfc, int address, byte[] msg,
 			int userDataStart, int userDataLength) throws IOException {
 		PrimaryLinkLayerState newState = primaryState;
@@ -98,8 +112,9 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 				setNewState(LinkLayerState.AVAILABLE);
 			} else if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM) {
 
-				if (sendLinkLayerTestFunction)
+				if (sendLinkLayerTestFunction) {
 					sendLinkLayerTestFunction = false;
+				}
 
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
 				setNewState(LinkLayerState.AVAILABLE);
@@ -151,8 +166,9 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		case LINK_SERVICE_NOT_IMPLEMENTED:
 			debugLog("PLL - link layer service not functioning/not implemented in secondary station");
 
-			if (sendLinkLayerTestFunction)
+			if (sendLinkLayerTestFunction) {
 				sendLinkLayerTestFunction = false;
+			}
 
 			if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM) {
 				newState = PrimaryLinkLayerState.LINK_LAYERS_AVAILABLE;
@@ -171,6 +187,7 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 	}
 
+	@Override
 	public void runStateMachine() throws IOException {
 		PrimaryLinkLayerState newState = primaryState;
 
@@ -285,13 +302,15 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 		}
 
-		if (primaryState != newState)
+		if (primaryState != newState) {
 			debugLog("PLL - old state: " + primaryState + " new state: " + newState);
+		}
 
 		primaryState = newState;
 
 	}
 
+	@Override
 	public void sendLinkLayerTestFunction() {
 		sendLinkLayerTestFunction = true;
 	}
@@ -312,8 +331,9 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 		if (newState != state) {
 			state = newState;
 
-			if (stateChangedCallback != null)
+			if (stateChangedCallback != null) {
 				stateChangedCallback.performStateChanged(stateChangedCallbackParameter, -1, newState);
+			}
 		}
 	}
 }

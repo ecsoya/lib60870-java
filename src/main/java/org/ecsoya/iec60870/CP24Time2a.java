@@ -1,19 +1,40 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870;
+
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 
 public class CP24Time2a {
 	private byte[] encodedValue = new byte[3];
 
 	public CP24Time2a() {
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++) {
 			encodedValue[i] = 0;
+		}
 	}
 
 	public CP24Time2a(byte[] msg, int startIndex) throws ASDUParsingException {
-		if (msg.length < startIndex + 3)
+		if (msg.length < startIndex + 3) {
 			throw new ASDUParsingException("Message too small for parsing CP24Time2a");
+		}
 
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++) {
 			encodedValue[i] = msg[startIndex + i];
+		}
 	}
 
 	public CP24Time2a(int minute, int second, int millisecond) {
@@ -80,10 +101,11 @@ public class CP24Time2a {
 	}
 
 	public void setInvalid(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] = (byte) (encodedValue[2] | 0x80);
-		else
+		} else {
 			encodedValue[2] = (byte) (encodedValue[2] & 0x7f);
+		}
 	}
 
 	public void setMillisecond(int value) {
@@ -109,15 +131,16 @@ public class CP24Time2a {
 	}
 
 	public void setSubstitued(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] = (byte) (encodedValue[2] | 0x40);
-		else
+		} else {
 			encodedValue[2] = (byte) (encodedValue[2] & 0xbf);
+		}
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see java.lang.Object#toString()
 	 */
 	@Override

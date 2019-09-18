@@ -1,4 +1,20 @@
-package org.ecsoya.iec60870.conn;
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package org.ecsoya.iec60870.core.file;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +25,7 @@ import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.ie.FileDirectory;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
+import org.ecsoya.iec60870.core.IMasterConnection;
 
 public class FilesAvailable {
 	public static class CS101n104File {
@@ -39,12 +56,13 @@ public class FilesAvailable {
 			for (CS101n104File file : availableFiles) {
 				if ((file.provider.getCommonAddress() == ca) && (file.provider.getInformationObjectAddress() == ioa)) {
 
-					if (nof == NameOfFile.DEFAULT)
+					if (nof == NameOfFile.DEFAULT) {
 						return file;
-					else {
+					} else {
 
-						if (nof == file.provider.getNameOfFile())
+						if (nof == file.provider.getNameOfFile()) {
 							return file;
+						}
 					}
 				}
 			}
@@ -70,10 +88,11 @@ public class FilesAvailable {
 	void sendDirectoy(IMasterConnection masterConnection, boolean spontaneous) {
 		CauseOfTransmission cot;
 
-		if (spontaneous)
+		if (spontaneous) {
 			cot = CauseOfTransmission.SPONTANEOUS;
-		else
+		} else {
 			cot = CauseOfTransmission.REQUEST;
+		}
 
 		synchronized (availableFiles) {
 
@@ -119,8 +138,9 @@ public class FilesAvailable {
 
 				byte sof = 0;
 
-				if (lastFile)
+				if (lastFile) {
 					sof = 0x20;
+				}
 
 				InformationObject io = new FileDirectory(currentIOA, file.provider.getNameOfFile(),
 						file.provider.getFileSize(), sof, new CP56Time2a(file.provider.getFileDate()));

@@ -1,23 +1,44 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
+
 public class CP32Time2a {
 	private byte[] encodedValue = new byte[4];
 
 	public CP32Time2a() {
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++) {
 			encodedValue[i] = 0;
+		}
 	}
 
 	CP32Time2a(byte[] msg, int startIndex) throws ASDUParsingException {
-		if (msg.length < startIndex + 4)
+		if (msg.length < startIndex + 4) {
 			throw new ASDUParsingException("Message too small for parsing CP56Time2a");
+		}
 
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++) {
 			encodedValue[i] = msg[startIndex + i];
+		}
 	}
 
 	public CP32Time2a(int hours, int minutes, int seconds, int milliseconds, boolean invalid, boolean summertime) {
@@ -115,10 +136,11 @@ public class CP32Time2a {
 	}
 
 	public void setInvalid(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] |= 0x80;
-		else
+		} else {
 			encodedValue[2] &= 0x7f;
+		}
 
 	}
 
@@ -145,19 +167,22 @@ public class CP32Time2a {
 	}
 
 	public void setSubstitued(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[2] |= 0x40;
-		else
+		} else {
 			encodedValue[2] &= 0xbf;
+		}
 	}
 
 	public void setSummerTime(boolean value) {
-		if (value)
+		if (value) {
 			encodedValue[3] |= 0x80;
-		else
+		} else {
 			encodedValue[3] &= 0x7f;
+		}
 	}
 
+	@Override
 	public String
 
 			toString() {

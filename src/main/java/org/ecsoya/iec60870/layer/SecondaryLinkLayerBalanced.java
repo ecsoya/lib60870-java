@@ -1,6 +1,19 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
@@ -11,7 +24,7 @@ import java.util.function.Consumer;
  */
 public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 
-	public static interface SecondaryLinkLayerBalancedApplicationLayer {
+	public interface SecondaryLinkLayerBalancedApplicationLayer {
 		boolean handle(int address, byte[] msg, int userDataStart, int userDataLength);
 	}
 
@@ -49,12 +62,14 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 		System.out.println(log);
 	}
 
+	@Override
 	public void handleMessage(FunctionCodePrimary fcp, boolean isBroadcast, int address, boolean fcb, boolean fcv,
 			byte[] msg, int userDataStart, int userDataLength) throws IOException {
 
 		if (fcv) {
-			if (checkFCB(fcb) == false)
+			if (checkFCB(fcb) == false) {
 				return;
+			}
 		}
 
 		switch (fcp) {
@@ -63,28 +78,31 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 			expectedFcb = true;
 			debugLog("SLL - RECV RESET REMOTE LINK");
 
-			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
+			if (linkLayer.linkLayerParameters.isUseSingleCharACK()) {
 				linkLayer.sendSingleCharACK();
-			else
+			} else {
 				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+			}
 
 			break;
 
 		case TEST_FUNCTION_FOR_LINK:
 			debugLog("SLL -TEST FUNCTION FOR LINK");
 			// TODO check if DCF has to be sent
-			if (linkLayer.linkLayerParameters.isUseSingleCharACK())
+			if (linkLayer.linkLayerParameters.isUseSingleCharACK()) {
 				linkLayer.sendSingleCharACK();
-			else
+			} else {
 				linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+			}
 			break;
 
 		case USER_DATA_CONFIRMED:
 			debugLog("SLL - USER DATA CONFIRMED");
 			if (userDataLength > 0) {
 
-				if (HandleApplicationLayer.handle(address, msg, userDataStart, userDataLength))
+				if (HandleApplicationLayer.handle(address, msg, userDataStart, userDataLength)) {
 					linkLayer.sendFixedFrameSecondary(FunctionCodeSecondary.ACK, linkLayerAddress, false, false);
+				}
 			}
 			break;
 
@@ -109,6 +127,7 @@ public class SecondaryLinkLayerBalanced extends SecondaryLinkLayer {
 		}
 	}
 
+	@Override
 	public void runStateMachine() {
 
 	}

@@ -1,9 +1,19 @@
-//====================================================================================================
-//The Free Edition of C# to Java Converter limits conversion output to 100 lines per file.
-
-//To subscribe to the Premium Edition, visit our website:
-//https://www.tangiblesoftwaresolutions.com/order/order-csharp-to-java.html
-//====================================================================================================
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 
 package org.ecsoya.iec60870.cs104;
 
@@ -19,12 +29,11 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.CP16Time2a;
 import org.ecsoya.iec60870.CP56Time2a;
-import org.ecsoya.iec60870.ConnectionException;
 import org.ecsoya.iec60870.asdu.ASDU;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.InformationObject;
@@ -39,9 +48,10 @@ import org.ecsoya.iec60870.asdu.ie.TestCommand;
 import org.ecsoya.iec60870.asdu.ie.TestCommandWithCP56Time2a;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
 import org.ecsoya.iec60870.asdu.ie.value.SelectAndCallQualifier;
-import org.ecsoya.iec60870.conn.FileClient;
-import org.ecsoya.iec60870.conn.IFileReceiver;
-import org.ecsoya.iec60870.conn.Master;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.Master;
+import org.ecsoya.iec60870.core.file.FileClient;
+import org.ecsoya.iec60870.core.file.IFileReceiver;
 
 /**
  * A single connection to a CS 104 (IEC 60870-5-104) server. Implements the \ref
@@ -54,6 +64,7 @@ public class Connection extends Master {
 		public long sentTime; // required for T1 timeout
 		public int seqNo;
 
+		@Override
 		public SentASDU clone() {
 			SentASDU varCopy = new SentASDU();
 
@@ -134,7 +145,7 @@ public class Connection extends Master {
 	}
 
 	public Connection(String hostname, APCIParameters apciParameters, ApplicationLayerParameters alParameters) {
-		this(hostname, 2404, apciParameters.Clone(), (ApplicationLayerParameters) alParameters.clone());
+		this(hostname, 2404, apciParameters.Clone(), alParameters.clone());
 	}
 
 	public Connection(String hostname, int tcpPort) {
@@ -147,20 +158,22 @@ public class Connection extends Master {
 	}
 
 	public void cancel() {
-		if (socket != null)
+		if (socket != null) {
 			try {
 				socket.close();
 			} catch (IOException e) {
 
 				e.printStackTrace();
 			}
+		}
 	}
 
 	private boolean checkConfirmTimeout(long currentTime) {
-		if ((currentTime - lastConfirmationTime) >= (apciParameters.getT2() * 1000))
+		if ((currentTime - lastConfirmationTime) >= (apciParameters.getT2() * 1000)) {
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
 
 	private boolean checkMessage(byte[] buffer, int msgSize) throws ConnectionException {
@@ -192,8 +205,9 @@ public class Connection extends Master {
 				return false;
 			}
 
-			if (checkSequenceNumber(frameRecvSequenceNumber) == false)
+			if (checkSequenceNumber(frameRecvSequenceNumber) == false) {
 				return false;
+			}
 
 			receiveSequenceNumber = (receiveSequenceNumber + 1) % 32768;
 			unconfirmedReceivedIMessages++;
@@ -203,8 +217,9 @@ public class Connection extends Master {
 
 				boolean messageHandled = false;
 
-				if (fileClient != null)
+				if (fileClient != null) {
 					messageHandled = fileClient.handleFileAsdu(asdu);
+				}
 
 				if (messageHandled == false) {
 					handleReceivedASDU(0, asdu);
@@ -220,8 +235,9 @@ public class Connection extends Master {
 
 			debugLog("Recv S(" + seqNo + ") (own sendcounter = " + sendSequenceNumber + ")");
 
-			if (checkSequenceNumber(seqNo) == false)
+			if (checkSequenceNumber(seqNo) == false) {
 				return false;
+			}
 		} else if ((buffer[2] & 0x03) == 0x03) { /* U format frame */
 
 			uMessageTimeout = 0;
@@ -244,14 +260,16 @@ public class Connection extends Master {
 			} else if (buffer[2] == 0x0b) { /* STARTDT_CON */
 				debugLog("RCVD STARTDT_CON");
 
-				if (connectionHandler != null)
+				if (connectionHandler != null) {
 					connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.STARTDT_CON_RECEIVED);
+				}
 
 			} else if (buffer[2] == 0x23) { /* STOPDT_CON */
 				debugLog("RCVD STOPDT_CON");
 
-				if (connectionHandler != null)
+				if (connectionHandler != null) {
 					connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.STOPDT_CON_RECEIVED);
+				}
 			}
 
 		} else {
@@ -276,25 +294,29 @@ public class Connection extends Master {
 				boolean counterOverflowDetected = false;
 
 				if (oldestSentASDU == -1) { /* if k-Buffer is empty */
-					if (seqNo == sendSequenceNumber)
+					if (seqNo == sendSequenceNumber) {
 						seqNoIsValid = true;
+					}
 				} else {
 					// Two cases are required to reflect sequence number overflow
 					if (sentASDUs[oldestSentASDU].seqNo <= sentASDUs[newestSentASDU].seqNo) {
-						if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) && (seqNo <= sentASDUs[newestSentASDU].seqNo))
+						if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) && (seqNo <= sentASDUs[newestSentASDU].seqNo)) {
 							seqNoIsValid = true;
+						}
 
 					} else {
-						if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) || (seqNo <= sentASDUs[newestSentASDU].seqNo))
+						if ((seqNo >= sentASDUs[oldestSentASDU].seqNo) || (seqNo <= sentASDUs[newestSentASDU].seqNo)) {
 							seqNoIsValid = true;
+						}
 
 						counterOverflowDetected = true;
 					}
 
 					int latestValidSeqNo = (sentASDUs[oldestSentASDU].seqNo - 1) % 32768;
 
-					if (latestValidSeqNo == seqNo)
+					if (latestValidSeqNo == seqNo) {
 						seqNoIsValid = true;
+					}
 				}
 
 				if (seqNoIsValid == false) {
@@ -305,11 +327,13 @@ public class Connection extends Master {
 				if (oldestSentASDU != -1) {
 					do {
 						if (counterOverflowDetected == false) {
-							if (seqNo < sentASDUs[oldestSentASDU].seqNo)
+							if (seqNo < sentASDUs[oldestSentASDU].seqNo) {
 								break;
+							}
 						} else {
-							if (seqNo == ((sentASDUs[oldestSentASDU].seqNo - 1) % 32768))
+							if (seqNo == ((sentASDUs[oldestSentASDU].seqNo - 1) % 32768)) {
 								break;
+							}
 						}
 
 						oldestSentASDU = (oldestSentASDU + 1) % maxSentASDUs;
@@ -321,8 +345,9 @@ public class Connection extends Master {
 							break;
 						}
 
-						if (sentASDUs[oldestSentASDU].seqNo == seqNo)
+						if (sentASDUs[oldestSentASDU].seqNo == seqNo) {
 							break;
+						}
 
 					} while (true);
 				}
@@ -347,7 +372,7 @@ public class Connection extends Master {
 	/// <summary>
 /// Connect this instance.
 /// </summary>
-/// 
+///
 /// The function will throw a SocketException if the connection attempt is rejected or timed out.
 /// <exception cref="ConnectionException">description</exception>
 	public void connect() throws ConnectionException {
@@ -363,8 +388,9 @@ public class Connection extends Master {
 			}
 		}
 
-		if (socketError)
+		if (socketError) {
 			throw new ConnectionException(lastException.getMessage(), lastException);
+		}
 	}
 
 	/// <summary>
@@ -382,12 +408,13 @@ public class Connection extends Master {
 
 			workerThread.start();
 		} else {
-			if (running)
+			if (running) {
 				throw new ConnectionException("already connected",
 						new SocketException("10056")); /* WSAEISCONN - Socket is already connected */
-			else
+			} else {
 				throw new ConnectionException("already connecting",
 						new SocketException("10037")); /* WSAEALREADY - Operation already in progress */
+			}
 
 		}
 	}
@@ -419,10 +446,12 @@ public class Connection extends Master {
 	}
 
 	private void debugLog(String message) {
-		if (debug)
+		if (debug) {
 			System.out.println("CS104 MASTER CONNECTION " + connectionID + ": " + message);
+		}
 	}
 
+	@Override
 	public ApplicationLayerParameters getApplicationLayerParameters() {
 		return alParameters;
 	}
@@ -438,10 +467,12 @@ public class Connection extends Master {
 		sendASDU(getDirectoryAsdu);
 	}
 
+	@Override
 	public void getFile(int commonAddress, int informationObjectAddress, NameOfFile nameOfFile, IFileReceiver receiver)
 			throws ConnectionException {
-		if (fileClient == null)
+		if (fileClient == null) {
 			fileClient = new FileClient(this, (msg) -> debugLog(msg));
+		}
 
 		fileClient.requestFile(commonAddress, informationObjectAddress, nameOfFile, receiver);
 	}
@@ -488,8 +519,9 @@ public class Connection extends Master {
 					socketError = false;
 					connecting = false;
 
-					if (connectionHandler != null)
+					if (connectionHandler != null) {
 						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.OPENED);
+					}
 
 				} catch (SocketException se) {
 					debugLog("SocketException: " + se.toString());
@@ -498,8 +530,9 @@ public class Connection extends Master {
 					socketError = true;
 					lastException = se;
 
-					if (connectionHandler != null)
+					if (connectionHandler != null) {
 						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.CONNECT_FAILED);
+					}
 				}
 
 				if (running) {
@@ -540,22 +573,27 @@ public class Connection extends Master {
 								}
 
 								suspendThread = false;
-							} else if (bytesRec == -1)
+							} else if (bytesRec == -1) {
 								loopRunning = false;
-
-							if (handleTimeouts() == false)
-								loopRunning = false;
-
-							if (isConnected() == false)
-								loopRunning = false;
-
-							if (useSendMessageQueue) {
-								if (sendNextWaitingASDU() == true)
-									suspendThread = false;
 							}
 
-							if (suspendThread)
+							if (handleTimeouts() == false) {
+								loopRunning = false;
+							}
+
+							if (isConnected() == false) {
+								loopRunning = false;
+							}
+
+							if (useSendMessageQueue) {
+								if (sendNextWaitingASDU() == true) {
+									suspendThread = false;
+								}
+							}
+
+							if (suspendThread) {
 								Thread.sleep(10);
+							}
 
 						} catch (SocketException e) {
 							loopRunning = false;
@@ -580,8 +618,9 @@ public class Connection extends Master {
 
 					netStream.close();
 
-					if (connectionHandler != null)
+					if (connectionHandler != null) {
 						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.CLOSED);
+					}
 				}
 
 			} catch (Exception ane) {
@@ -628,8 +667,8 @@ public class Connection extends Master {
 		}
 
 		if (unconfirmedReceivedIMessages > 0) {
-			if (checkConfirmTimeout((long) currentTime)) {
-				lastConfirmationTime = (long) currentTime;
+			if (checkConfirmTimeout(currentTime)) {
+				lastConfirmationTime = currentTime;
 
 				unconfirmedReceivedIMessages = 0;
 				timeoutT2Triggered = false;
@@ -649,7 +688,7 @@ public class Connection extends Master {
 		synchronized (sentASDUs) {
 			if (oldestSentASDU != -1) {
 
-				if (((long) currentTime - sentASDUs[oldestSentASDU].sentTime) >= (apciParameters.getT1() * 1000)) {
+				if ((currentTime - sentASDUs[oldestSentASDU].sentTime) >= (apciParameters.getT1() * 1000)) {
 					return false;
 				}
 			}
@@ -661,8 +700,9 @@ public class Connection extends Master {
 	private void internalSendASDU(ASDU asdu) throws ConnectionException, IOException {
 		synchronized (socket) {
 
-			if (running == false)
+			if (running == false) {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 
 			if (useSendMessageQueue) {
 				synchronized (waitingToBeSent) {
@@ -672,8 +712,9 @@ public class Connection extends Master {
 				sendNextWaitingASDU();
 			} else {
 
-				if (isSentBufferFull())
+				if (isSentBufferFull()) {
 					throw new ConnectionException("Flow control congestion. Try again later.");
+				}
 
 				sendIMessageAndUpdateSentASDUs(asdu);
 			}
@@ -706,15 +747,17 @@ public class Connection extends Master {
 
 	private boolean isSentBufferFull() {
 
-		if (oldestSentASDU == -1)
+		if (oldestSentASDU == -1) {
 			return false;
+		}
 
 		int newIndex = (newestSentASDU + 1) % maxSentASDUs;
 
-		if (newIndex == oldestSentASDU)
+		if (newIndex == oldestSentASDU) {
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
 
 	/// <summary>
@@ -722,10 +765,11 @@ public class Connection extends Master {
 /// </summary>
 /// <returns><c>true</c> if this instance is send buffer full; otherwise, <c>false</c>.</returns>
 	public boolean isTransmitBufferFull() {
-		if (useSendMessageQueue)
+		if (useSendMessageQueue) {
 			return false;
-		else
+		} else {
 			return isSentBufferFull();
+		}
 	}
 
 	public boolean isUseSendMessageQueue() {
@@ -746,8 +790,9 @@ public class Connection extends Master {
 				debugLog(currentIndex + " : S " + sentASDUs[currentIndex].seqNo + " : time "
 						+ sentASDUs[currentIndex].sentTime);
 
-				if (currentIndex == newestSentASDU)
+				if (currentIndex == newestSentASDU) {
 					nextIndex = -1;
+				}
 
 				currentIndex = (currentIndex + 1) % maxSentASDUs;
 
@@ -764,8 +809,9 @@ public class Connection extends Master {
 		if (socket != null && socket.isConnected()) {
 			InputStream is = socket.getInputStream();
 			// wait for first byte
-			if (is.read(buffer, 0, 1) != 1)
+			if (is.read(buffer, 0, 1) != 1) {
 				return -1;
+			}
 
 			if (buffer[0] != 0x68) {
 				debugLog("Missing SOF indicator!");
@@ -774,8 +820,9 @@ public class Connection extends Master {
 			}
 
 			// read length byte
-			if (is.read(buffer, 1, 1) != 1)
+			if (is.read(buffer, 1, 1) != 1) {
 				return -1;
+			}
 
 			int length = buffer[1];
 
@@ -810,16 +857,18 @@ public class Connection extends Master {
 		newestSentASDU = -1;
 		sentASDUs = new SentASDU[maxSentASDUs];
 
-		if (useSendMessageQueue)
+		if (useSendMessageQueue) {
 			waitingToBeSent = new LinkedList<ASDU>();
+		}
 
-		statistics.Reset();
+		statistics.reset();
 	}
 
 	private void resetT3Timeout() {
 		nextT3Timeout = System.currentTimeMillis() + (apciParameters.getT3() * 1000);
 	}
 
+	@Override
 	public void sendASDU(ASDU asdu) throws ConnectionException {
 		try {
 			internalSendASDU(asdu);
@@ -832,6 +881,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendClockSyncCommand(int commonAddress, CP56Time2a time) throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
 				commonAddress, false);
@@ -850,7 +900,7 @@ public class Connection extends Master {
 	}
 
 /// The type ID has to match the type of the InformationObject!
-/// 
+///
 /// C_SC_NA_1 -> SingleCommand
 /// C_DC_NA_1 -> DoubleCommand
 /// C_RC_NA_1 -> StepCommand
@@ -859,7 +909,8 @@ public class Connection extends Master {
 /// C_SE_NB_1 -> SetpointCommandScaled
 /// C_SE_NC_1 -> SetpointCommandShort
 /// C_BO_NA_1 -> Bitstring32Command
-/// 
+///
+	@Override
 	public void sendControlCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			InformationObject informationObject) throws ConnectionException {
 
@@ -879,6 +930,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendCounterInterrogationCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			byte qualifierOfCounter) throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, causeOfTransmission, false, false, (byte) alParameters.getOA(),
@@ -897,6 +949,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendDelayAcquisitionCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			CP16Time2a delay) throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
@@ -944,10 +997,11 @@ public class Connection extends Master {
 
 			return sendSequenceNumber;
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 
 	}
@@ -975,6 +1029,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendInterrogationCommand(CauseOfTransmission cot, int commonAddress, byte qualifierOfInterrogation)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, cot, false, false, (byte) alParameters.getOA(), commonAddress, false);
@@ -1008,8 +1063,9 @@ public class Connection extends Master {
 	private boolean sendNextWaitingASDU() throws ConnectionException {
 		boolean sentAsdu = false;
 
-		if (running == false)
+		if (running == false) {
 			throw new ConnectionException("connection lost");
+		}
 
 		try {
 
@@ -1017,16 +1073,18 @@ public class Connection extends Master {
 
 				while (waitingToBeSent.size() > 0) {
 
-					if (isSentBufferFull() == true)
+					if (isSentBufferFull() == true) {
 						break;
+					}
 
 					ASDU asdu = waitingToBeSent.pop();
 
 					if (asdu != null) {
 						sendIMessageAndUpdateSentASDUs(asdu);
 						sentAsdu = true;
-					} else
+					} else {
 						break;
+					}
 
 				}
 			}
@@ -1039,6 +1097,7 @@ public class Connection extends Master {
 		return sentAsdu;
 	}
 
+	@Override
 	public void sendReadCommand(int commonAddress, int informationObjectAddress) throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.REQUEST, false, false, (byte) alParameters.getOA(),
 				commonAddress, false);
@@ -1056,6 +1115,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendResetProcessCommand(CauseOfTransmission causeOfTransmission, int commonAddress, byte qualifier)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
@@ -1092,10 +1152,11 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 
@@ -1103,10 +1164,11 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(STARTDT_CON_MSG, 0, STARTDT_CON_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 
@@ -1117,10 +1179,11 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 
@@ -1128,13 +1191,15 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(STOPDT_CON_MSG, 0, STOPDT_CON_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 
+	@Override
 	public void sendTestCommand(int commonAddress) throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
 				commonAddress, false);
@@ -1152,6 +1217,7 @@ public class Connection extends Master {
 		}
 	}
 
+	@Override
 	public void sendTestCommandWithCP56Time2a(int commonAddress, short testSequenceNumber, CP56Time2a timestamp)
 			throws ConnectionException {
 		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
@@ -1174,10 +1240,11 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 
@@ -1185,10 +1252,11 @@ public class Connection extends Master {
 		if (running) {
 			sendMessage(TESTFR_CON_MSG, 0, TESTFR_CON_MSG.length);
 		} else {
-			if (lastException != null)
+			if (lastException != null) {
 				throw new ConnectionException(lastException.getMessage(), lastException);
-			else
+			} else {
 				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
 		}
 	}
 

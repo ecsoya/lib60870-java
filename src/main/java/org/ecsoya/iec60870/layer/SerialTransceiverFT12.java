@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
@@ -51,10 +67,11 @@ public class SerialTransceiverFT12 {
 	}
 
 	public int getBaudRate() {
-		if (port != null)
+		if (port != null) {
 			return port.getBaudRate();
-		else
+		} else {
 			return 10000000;
+		}
 	}
 
 	// read the next block of the message
@@ -71,8 +88,9 @@ public class SerialTransceiverFT12 {
 
 				readBytes++;
 
-				if (readBytes >= count)
+				if (readBytes >= count) {
 					break;
+				}
 			}
 		} catch (IOException e) {
 		}
@@ -107,9 +125,10 @@ public class SerialTransceiverFT12 {
 							msgSize += 2;
 
 							messageHandler.apply(buffer, msgSize);
-						} else
+						} else {
 							debugLog("RECV: Timeout reading variable length frame msgSize = " + msgSize
 									+ " readBytes = " + readBytes);
+						}
 					} else {
 						debugLog("RECV: SYNC ERROR 1!");
 					}
@@ -124,9 +143,10 @@ public class SerialTransceiverFT12 {
 						msgSize += 1;
 
 						messageHandler.apply(buffer, msgSize);
-					} else
+					} else {
 						debugLog("RECV: Timeout reading fixed length frame msgSize = " + msgSize + " readBytes = "
 								+ readBytes);
+					}
 				} else if (buffer[0] == 0xe5) {
 					int msgSize = 1;
 

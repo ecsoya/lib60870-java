@@ -1,11 +1,24 @@
-/**
- * 
- */
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu.ie;
 
-import org.ecsoya.iec60870.ASDUParsingException;
 import org.ecsoya.iec60870.CP56Time2a;
 import org.ecsoya.iec60870.Frame;
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.TypeID;
@@ -24,11 +37,13 @@ public class FileDirectory extends InformationObject {
 	public FileDirectory(ApplicationLayerParameters parameters, byte[] msg, int startIndex, boolean isSequence)
 			throws ASDUParsingException {
 		super(parameters, msg, startIndex, isSequence);
-		if (!isSequence)
+		if (!isSequence) {
 			startIndex += parameters.getSizeOfIOA(); /* skip IOA */
+		}
 
-		if ((msg.length - startIndex) < getEncodedSize())
+		if ((msg.length - startIndex) < getEncodedSize()) {
 			throw new ASDUParsingException("Message too small");
+		}
 
 		int nofValue;
 
@@ -61,21 +76,25 @@ public class FileDirectory extends InformationObject {
 		this.nof = nof;
 		this.lengthOfFile = lengthOfFile;
 
-		if (status < 0)
+		if (status < 0) {
 			status = 0;
-		else if (status > 31)
+		} else if (status > 31) {
 			status = 31;
+		}
 
 		byte sof = (byte) status;
 
-		if (LFD)
+		if (LFD) {
 			sof += 0x20;
+		}
 
-		if (FOR)
+		if (FOR) {
 			sof += 0x40;
+		}
 
-		if (FA)
+		if (FA) {
 			sof += 0x80;
+		}
 
 		this.sof = sof;
 		this.creationTime = creationTime;
@@ -91,7 +110,7 @@ public class FileDirectory extends InformationObject {
 		frame.setNextByte((byte) ((lengthOfFile / 0x100) % 0x100));
 		frame.setNextByte((byte) ((lengthOfFile / 0x10000) % 0x100));
 
-		frame.setNextByte((byte) sof);
+		frame.setNextByte(sof);
 
 		frame.appendBytes(creationTime.getEncodedValue());
 	}
@@ -106,7 +125,7 @@ public class FileDirectory extends InformationObject {
 	}
 
 	public int getStatus() {
-		return (int) (sof & 0x1f);
+		return sof & 0x1f;
 	}
 
 	@Override

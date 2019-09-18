@@ -1,32 +1,25 @@
+/*******************************************************************************
+ * Copyright (C) 2019 Ecsoya (jin.liu@soyatec.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package org.ecsoya.iec60870.asdu.ie.value;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import org.ecsoya.iec60870.ASDUParsingException;
-
-/*
- *  BinaryCounterReading.cs
- *
- *  Copyright 2016 MZ Automation GmbH
- *
- *  This file is part of lib60870.NET
- *
- *  lib60870.NET is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  lib60870.NET is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with lib60870.NET.  If not, see <http: //www.gnu.org/licenses/>.
- *
- *  See COPYING file for the complete license text.
- */
+import org.ecsoya.iec60870.asdu.ASDUParsingException;
 
 /**
  * Binary counter reading. Used for tranmission of integrated totals.
@@ -50,7 +43,7 @@ public class BinaryCounterReading {
 
 	/**
 	 * Gets or sets the adjusted flag.
-	 * 
+	 *
 	 * <value><c>true</c> if adjusted flag is set; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getAdjusted() {
@@ -59,7 +52,7 @@ public class BinaryCounterReading {
 
 	/**
 	 * Gets or sets the carry flag
-	 * 
+	 *
 	 * <value><c>true</c> if carry flag set; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getCarry() {
@@ -72,7 +65,7 @@ public class BinaryCounterReading {
 
 	/**
 	 * Gets or sets the invalid flag
-	 * 
+	 *
 	 * <value><c>true</c> if invalid flag is set; otherwise, <c>false</c>.</value>
 	 */
 	public final boolean getInvalid() {
@@ -81,7 +74,7 @@ public class BinaryCounterReading {
 
 	/**
 	 * Gets or sets the sequence number.
-	 * 
+	 *
 	 * <value>The sequence number.</value>
 	 */
 	public final int getSequenceNumber() {
@@ -90,7 +83,7 @@ public class BinaryCounterReading {
 
 	/**
 	 * Gets or sets the counter value.
-	 * 
+	 *
 	 * <value>The value.</value>
 	 */
 	public final int getValue() {

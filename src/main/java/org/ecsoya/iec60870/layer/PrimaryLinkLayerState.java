@@ -1,0 +1,11 @@
+package org.ecsoya.iec60870.layer;
+
+public enum PrimaryLinkLayerState {
+	IDLE,
+	EXECUTE_REQUEST_STATUS_OF_LINK,
+	EXECUTE_RESET_REMOTE_LINK,
+	LINK_LAYERS_AVAILABLE,
+	EXECUTE_SERVICE_SEND_CONFIRM,
+	EXECUTE_SERVICE_REQUEST_RESPOND,
+	SECONDARY_LINK_LAYER_BUSY /* Only required in balanced link layer */
+}

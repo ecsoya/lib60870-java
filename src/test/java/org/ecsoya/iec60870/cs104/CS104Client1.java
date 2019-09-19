@@ -184,7 +184,7 @@ public class CS104Client1 {
 				(Object parameter, ConnectionEvent connectionEvent) -> ConnectionHandler(parameter, connectionEvent),
 				null);
 
-		con.connect();
+		con.start();
 
 		con.getDirectory(1);
 
@@ -213,17 +213,17 @@ public class CS104Client1 {
 
 		System.out.println("CLOSE");
 
-		con.close();
+		con.stop();
 
 		System.out.println("RECONNECT");
 
-		con.connect();
+		con.start();
 
 		Thread.sleep(5000);
 
 		System.out.println("CLOSE 2");
 
-		con.close();
+		con.stop();
 
 		System.out.println("Press any key to terminate...");
 

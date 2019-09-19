@@ -32,7 +32,7 @@ import org.ecsoya.iec60870.asdu.ie.value.AcknowledgeQualifier;
 import org.ecsoya.iec60870.asdu.ie.value.FileServerState;
 import org.ecsoya.iec60870.asdu.ie.value.LastSectionOrSegmentQualifier;
 import org.ecsoya.iec60870.asdu.ie.value.SelectAndCallQualifier;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 import org.ecsoya.iec60870.core.file.FilesAvailable.CS101n104File;
 
 public class FileServer {
@@ -45,7 +45,7 @@ public class FileServer {
 
 	private ApplicationLayerParameters alParameters;
 
-	private IMasterConnection connection;
+	private IMasterCallable connection;
 
 	private int maxSegmentSize;
 	private byte currentSectionNumber;
@@ -56,7 +56,7 @@ public class FileServer {
 	private byte fileChecksum = 0;
 	private FileServerState transferState;
 
-	public FileServer(IMasterConnection masterConnection, FilesAvailable availableFiles, Consumer<String> logger) {
+	public FileServer(IMasterCallable masterConnection, FilesAvailable availableFiles, Consumer<String> logger) {
 		transferState = FileServerState.UNSELECTED_IDLE;
 		alParameters = masterConnection.getApplicationLayerParameters();
 		maxSegmentSize = FileSegment.GetMaxDataSize(alParameters);

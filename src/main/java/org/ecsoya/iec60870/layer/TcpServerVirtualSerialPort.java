@@ -46,13 +46,6 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 	public TcpServerVirtualSerialPort() {
 	}
 
-	@Override
-	public void close() throws IOException {
-		if (socketStream != null) {
-			socketStream.close();
-		}
-	}
-
 	private void debugLog(String msg) {
 		if (debugOutput) {
 			System.out.print("CS101 TCP link layer: ");
@@ -81,15 +74,11 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 	 */
 
 	@Override
-	public int read(byte[] buffer, int offset, int count) throws IOException {
-		if (socketStream != null) {
-
-			if (connected) {
-				DataInputStream is = new DataInputStream(conSocket.getInputStream());
-				return is.read(buffer, offset, count);
-			} else {
-				return 0;
-			}
+	public int read(byte[] buffer, int offset, int count, int timeouts) throws IOException {
+		if (conSocket != null && conSocket.isConnected()) {
+			conSocket.setSoTimeout(timeouts);
+			DataInputStream is = new DataInputStream(conSocket.getInputStream());
+			return is.read(buffer, offset, count);
 		} else {
 			return 0;
 		}
@@ -97,13 +86,9 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 
 	@Override
 	public byte readByte() throws IOException {
-		if (socketStream != null) {
-			if (connected) {
-				DataInputStream is = new DataInputStream(conSocket.getInputStream());
-				return is.readByte();
-			} else {
-				return 0;
-			}
+		if (conSocket != null && conSocket.isConnected()) {
+			DataInputStream is = new DataInputStream(conSocket.getInputStream());
+			return is.readByte();
 		} else {
 			return 0;
 		}
@@ -179,16 +164,11 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 		localHostname = localAddress;
 	}
 
-	@Override
-	public void setReadTimeout(int timeout) {
-		this.readTimeout = timeout;
-	}
-
 	public void setTcpPort(int tcpPort) {
 		localPort = tcpPort;
 	}
 
-	public void start() throws IOException {
+	public void connect() throws IOException {
 		if (running == false) {
 			// Create a TCP/IP socket.
 			listeningSocket = ServerSocketFactory.getDefault().createServerSocket();
@@ -203,9 +183,15 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 		}
 	}
 
-	public void stop() throws IOException {
+	@Override
+	public void close() throws IOException {
 		if (running == true) {
 			running = false;
+
+			if (socketStream != null) {
+				socketStream.close();
+			}
+
 			listeningSocket.close();
 
 			try {
@@ -214,6 +200,11 @@ public class TcpServerVirtualSerialPort implements SerialStream {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	@Override
+	public void write(byte[] buffer, int offset, int length, int timeouts) throws IOException {
+		write(buffer, offset, length);
 	}
 
 	@Override

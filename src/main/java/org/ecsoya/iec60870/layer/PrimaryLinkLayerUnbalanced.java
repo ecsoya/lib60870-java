@@ -180,7 +180,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 				DebugLog("PLL - received USER DATA");
 
 				if (primaryState == PrimaryLinkLayerState.EXECUTE_SERVICE_REQUEST_RESPOND) {
-					linkLayerUnbalanced.callbacks.userData(address, msg, userDataStart, userDataLength);
+					linkLayerUnbalanced.callbacks.handleUserData(address, msg, userDataStart, userDataLength);
 
 					requestClass1Data = false;
 					requestClass2Data = false;
@@ -235,7 +235,7 @@ public class PrimaryLinkLayerUnbalanced extends PrimaryLinkLayer implements IPri
 
 			if (acd) {
 				if (linkLayerUnbalanced.callbacks != null) {
-					linkLayerUnbalanced.callbacks.accessDemand(address);
+					linkLayerUnbalanced.callbacks.handleAccessDemand(address);
 				}
 			}
 

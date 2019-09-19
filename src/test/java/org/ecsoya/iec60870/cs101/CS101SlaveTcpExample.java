@@ -1,6 +1,5 @@
 package org.ecsoya.iec60870.cs101;
 
-import java.io.IOException;
 import java.util.Scanner;
 
 import org.ecsoya.iec60870.asdu.ASDU;
@@ -10,7 +9,7 @@ import org.ecsoya.iec60870.asdu.ie.SinglePointInformation;
 import org.ecsoya.iec60870.asdu.ie.StepPositionInformation;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
 import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 import org.ecsoya.iec60870.core.file.TransparentFile;
 import org.ecsoya.iec60870.layer.LinkLayerMode;
 import org.ecsoya.iec60870.layer.LinkLayerParameters;
@@ -19,9 +18,9 @@ import org.ecsoya.iec60870.layer.TcpServerVirtualSerialPort;
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
  */
-public class CS101SlaveTcp {
+public class CS101SlaveTcpExample {
 
-	private static boolean myInterrogationHandler(Object parameter, IMasterConnection connection, ASDU asdu, byte qoi) {
+	private static boolean myInterrogationHandler(Object parameter, IMasterCallable connection, ASDU asdu, byte qoi) {
 		System.out.println("Interrogation for group " + qoi);
 
 		connection.sendACT_CON(asdu, false);
@@ -71,12 +70,12 @@ public class CS101SlaveTcp {
 		// TcpClientVirtualSerialPort("192.168.2.9", 2404);
 
 		port.setDebugOutput(true);
-		try {
-			port.start();
-		} catch (IOException e) {
-			e.printStackTrace();
-			running = false;
-		}
+//		try {
+//			port.start();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//			running = false;
+//		}
 
 		CS101Slave slave = new CS101Slave(port, llParameters);
 		slave.setDebugOutput(true);
@@ -85,7 +84,7 @@ public class CS101SlaveTcp {
 
 		slave.setLinkLayerMode(LinkLayerMode.BALANCED);
 
-		slave.setInterrogationHandler((Object parameter, IMasterConnection connection, ASDU asdu,
+		slave.setInterrogationHandler((Object parameter, IMasterCallable connection, ASDU asdu,
 				byte qoi) -> myInterrogationHandler(parameter, connection, asdu, qoi), null);
 
 		slave.setUserDataQueueSizes(50, 20);
@@ -150,12 +149,12 @@ public class CS101SlaveTcp {
 			scanner.close();
 		}
 
-		try {
-			port.stop();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+//		try {
+//			port.stop();
+//		} catch (ConnectionException e) {
+//
+//			e.printStackTrace();
+//		}
 	}
 
 }

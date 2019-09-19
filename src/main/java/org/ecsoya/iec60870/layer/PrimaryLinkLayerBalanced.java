@@ -18,7 +18,7 @@ package org.ecsoya.iec60870.layer;
 
 import java.io.IOException;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.ecsoya.iec60870.BufferFrame;
 
@@ -44,15 +44,15 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 
 	private LinkLayer linkLayer;
 
-	private Function<Void, BufferFrame> GetUserData;
+	private Supplier<BufferFrame> userDataSupplier;
 
 	private LinkLayerStateChanged stateChangedCallback = null;
 	private Object stateChangedCallbackParameter = null;
 
-	public PrimaryLinkLayerBalanced(LinkLayer linkLayer, Function<Void, BufferFrame> getUserData,
+	public PrimaryLinkLayerBalanced(LinkLayer linkLayer, Supplier<BufferFrame> userDataSupplier,
 			Consumer<String> debugLog) {
 		this.debugLog = debugLog;
-		this.GetUserData = getUserData;
+		this.userDataSupplier = userDataSupplier;
 		this.linkLayer = linkLayer;
 	}
 
@@ -248,7 +248,7 @@ public class PrimaryLinkLayerBalanced extends PrimaryLinkLayer {
 				originalSendTime = lastSendTime;
 				newState = PrimaryLinkLayerState.EXECUTE_SERVICE_SEND_CONFIRM;
 			} else {
-				BufferFrame asdu = GetUserData.apply(null);
+				BufferFrame asdu = userDataSupplier.get();
 
 				if (asdu != null) {
 

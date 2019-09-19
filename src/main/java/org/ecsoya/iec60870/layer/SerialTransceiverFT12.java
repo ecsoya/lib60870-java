@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import org.ecsoya.iec60870.serial.SerialPort;
 import org.ecsoya.iec60870.serial.SerialStream;
 
 /// <summary>
@@ -29,8 +28,7 @@ import org.ecsoya.iec60870.serial.SerialStream;
 /// </summary>
 public class SerialTransceiverFT12 {
 
-	private SerialStream serialStream = null;
-	private SerialPort port = null;
+	private final SerialStream serialStream;
 
 	private Consumer<String> debugLog;
 
@@ -44,16 +42,8 @@ public class SerialTransceiverFT12 {
 	// timeout to wait for next character in a message
 	private int characterTimeout = 200;
 
-	public SerialTransceiverFT12(SerialPort port, LinkLayerParameters linkLayerParameters, Consumer<String> debugLog) {
-		this.port = port;
-		this.serialStream = port.getBaseStream();
-		this.debugLog = debugLog;
-		this.linkLayerParameters = linkLayerParameters;
-	}
-
 	public SerialTransceiverFT12(SerialStream serialStream, LinkLayerParameters linkLayerParameters,
 			Consumer<String> debugLog) {
-//		this.port = null;
 		this.serialStream = serialStream;
 		this.debugLog = debugLog;
 		this.linkLayerParameters = linkLayerParameters;
@@ -66,51 +56,19 @@ public class SerialTransceiverFT12 {
 		System.out.println(log);
 	}
 
-	public int getBaudRate() {
-		if (port != null) {
-			return port.getBaudRate();
-		} else {
-			return 10000000;
-		}
-	}
-
-	// read the next block of the message
-	private int readBytesWithTimeout(byte[] buffer, int startIndex, int count, int timeout) {
-		int readByte;
-		int readBytes = 0;
-
-		serialStream.setReadTimeout(timeout * count);
-
-		try {
-
-			while ((readByte = serialStream.readByte()) != -1) {
-				buffer[startIndex++] = (byte) readByte;
-
-				readBytes++;
-
-				if (readBytes >= count) {
-					break;
-				}
-			}
-		} catch (IOException e) {
-		}
-
-		return readBytes;
-	}
-
 	public void readNextMessage(byte[] buffer, BiFunction<byte[], Integer, Void> messageHandler) {
 		// NOTE: there is some basic decoding required to determine message start/end
 		// and synchronization failures.
 
 		try {
 
-			int read = readBytesWithTimeout(buffer, 0, 1, messageTimeout);
+			int read = serialStream.read(buffer, 0, 1, messageTimeout);
 
 			if (read == 1) {
 
 				if (buffer[0] == 0x68) {
 
-					int bytesRead = readBytesWithTimeout(buffer, 1, 1, characterTimeout);
+					int bytesRead = serialStream.read(buffer, 1, 1, characterTimeout);
 
 					if (bytesRead == 1) {
 
@@ -118,7 +76,7 @@ public class SerialTransceiverFT12 {
 
 						msgSize += 4;
 
-						int readBytes = readBytesWithTimeout(buffer, 2, msgSize, characterTimeout);
+						int readBytes = serialStream.read(buffer, 2, msgSize, characterTimeout);
 
 						if (readBytes == msgSize) {
 
@@ -136,7 +94,7 @@ public class SerialTransceiverFT12 {
 
 					int msgSize = 3 + linkLayerParameters.getAddressLength();
 
-					int readBytes = readBytesWithTimeout(buffer, 1, msgSize, characterTimeout);
+					int readBytes = serialStream.read(buffer, 1, msgSize, characterTimeout);
 
 					if (readBytes == msgSize) {
 
@@ -185,4 +143,11 @@ public class SerialTransceiverFT12 {
 		this.characterTimeout = characterTimeout;
 	}
 
+	public void connect() throws IOException {
+		serialStream.connect();
+	}
+
+	public void close() throws IOException {
+		serialStream.close();
+	}
 }

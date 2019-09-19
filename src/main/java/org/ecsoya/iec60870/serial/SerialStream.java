@@ -25,14 +25,18 @@ import java.io.IOException;
  */
 public interface SerialStream extends Closeable, Flushable {
 
-	int read(byte[] buffer, int offset, int length) throws IOException;
+	void connect() throws IOException;
 
 	// READ
 	byte readByte() throws IOException;
 
-	void setReadTimeout(int timeout);
+	/**
+	 * Read stream to buffer with timeouts. Return read length.
+	 */
+	int read(byte[] buffer, int offset, int length, int timeouts) throws IOException;
 
 	// WRITE
+	void write(byte buffer[], int offset, int length, int timeouts) throws IOException;
 
 	void write(byte buffer[], int offset, int length) throws IOException;
 

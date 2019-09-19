@@ -17,9 +17,9 @@
 
 package org.ecsoya.iec60870.cs101;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.asdu.ASDU;
@@ -32,7 +32,8 @@ import org.ecsoya.iec60870.asdu.ie.DelayAcquisitionCommand;
 import org.ecsoya.iec60870.asdu.ie.InterrogationCommand;
 import org.ecsoya.iec60870.asdu.ie.ReadCommand;
 import org.ecsoya.iec60870.asdu.ie.ResetProcessCommand;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.ConnectionException;
+import org.ecsoya.iec60870.core.IMasterCallable;
 import org.ecsoya.iec60870.core.Slave;
 import org.ecsoya.iec60870.core.file.FileServer;
 import org.ecsoya.iec60870.layer.ISecondaryApplicationLayer;
@@ -44,14 +45,13 @@ import org.ecsoya.iec60870.layer.SecondaryLinkLayerBalanced;
 import org.ecsoya.iec60870.layer.SecondaryLinkLayerBalanced.SecondaryLinkLayerBalancedApplicationLayer;
 import org.ecsoya.iec60870.layer.SecondaryLinkLayerUnbalanced;
 import org.ecsoya.iec60870.layer.SerialTransceiverFT12;
-import org.ecsoya.iec60870.serial.SerialPort;
 import org.ecsoya.iec60870.serial.SerialStream;
 
 /**
  * CS 101 slave implementation (implements Slave interface)
  */
 public class CS101Slave extends Slave
-		implements ISecondaryApplicationLayer, IMasterConnection, SecondaryLinkLayerBalancedApplicationLayer {
+		implements ISecondaryApplicationLayer, IMasterCallable, SecondaryLinkLayerBalancedApplicationLayer {
 
 	private Consumer<String> DebugLog = (msg) -> {
 		System.out.print("CS101 SLAVE: ");
@@ -67,8 +67,6 @@ public class CS101Slave extends Slave
 	private LinkLayer linkLayer = null;
 
 	private byte[] buffer = new byte[300];
-
-	private SerialPort port = null;
 
 	private boolean running = false;
 
@@ -90,30 +88,8 @@ public class CS101Slave extends Slave
 
 	private FileServer fileServer;
 
-	private boolean initialized;
+	private boolean initialized = false;
 	private ApplicationLayerParameters parameters = new ApplicationLayerParameters();
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
-	/// class.
-	/// </summary>
-	/// <param name="port">serial port instance</param>
-	/// <param name="parameters">link layer parameters</param>
-	public CS101Slave(SerialPort port, LinkLayerParameters parameters) {
-		this.port = port;
-
-		linkLayerParameters = parameters;
-
-		if (linkLayerParameters == null) {
-			linkLayerParameters = new LinkLayerParameters();
-		}
-
-		transceiver = new SerialTransceiverFT12(port, linkLayerParameters, DebugLog);
-
-		initialized = false;
-
-		fileServer = new FileServer(this, getAvailableFiles(), DebugLog);
-	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="lib60870.CS101.CS101Slave"/>
@@ -264,17 +240,14 @@ public class CS101Slave extends Slave
 		return this.parameters;
 	}
 
-	private Function<Void, BufferFrame> getUserData() {
-		return (v) -> {
-			if (isUserDataClass1Available()) {
-				return dequeueUserDataClass1();
-			} else if (isUserDataClass2Available()) {
-				return dequeueUserDataClass2();
-			} else {
-				return null;
-			}
-		};
-
+	private BufferFrame getUserData() {
+		if (isUserDataClass1Available()) {
+			return dequeueUserDataClass1();
+		} else if (isUserDataClass2Available()) {
+			return dequeueUserDataClass2();
+		} else {
+			return null;
+		}
 	}
 
 	@Override
@@ -571,7 +544,6 @@ public class CS101Slave extends Slave
 	/// Run a the message receiver and state machines once. Can be used if no
 	/// threads should be used.
 	/// </summary>
-	@Override
 	public void run() {
 		if (initialized == false) {
 
@@ -581,15 +553,15 @@ public class CS101Slave extends Slave
 			if (linkLayerMode == LinkLayerMode.BALANCED) {
 
 				PrimaryLinkLayerBalanced primaryLinkLayerBalanced = new PrimaryLinkLayerBalanced(linkLayer,
-						getUserData(), DebugLog);
+						() -> getUserData(), DebugLog);
 				primaryLinkLayerBalanced.setLinkLayerAddressOtherStation(linkLayerAddressOtherStation);
 
-				linkLayer.SetPrimaryLinkLayer(primaryLinkLayerBalanced);
+				linkLayer.setPrimaryLinkLayer(primaryLinkLayerBalanced);
 
-				linkLayer.SetSecondaryLinkLayer(
+				linkLayer.setSecondaryLinkLayer(
 						new SecondaryLinkLayerBalanced(linkLayer, linkLayerAddressOtherStation, this, DebugLog));
 			} else {
-				linkLayer.SetSecondaryLinkLayer(
+				linkLayer.setSecondaryLinkLayer(
 						new SecondaryLinkLayerUnbalanced(linkLayer, linkLayerAddress, this, DebugLog));
 			}
 
@@ -600,7 +572,15 @@ public class CS101Slave extends Slave
 			fileServer.handleFileTransmission();
 		}
 
-		linkLayer.run();
+		try {
+			linkLayer.run();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void start() throws ConnectionException {
 	}
 
 	/********************************************

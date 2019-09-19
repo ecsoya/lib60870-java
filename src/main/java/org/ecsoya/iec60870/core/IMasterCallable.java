@@ -23,7 +23,8 @@ import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
  * Provides functions to be used in Slave callbacks to send data back to the
  * master
  */
-public interface IMasterConnection extends IConnection {
+public interface IMasterCallable {
+
 	ApplicationLayerParameters getApplicationLayerParameters();
 
 	void sendACT_CON(ASDU asdu, boolean negative);

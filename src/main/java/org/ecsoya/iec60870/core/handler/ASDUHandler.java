@@ -17,12 +17,12 @@
 package org.ecsoya.iec60870.core.handler;
 
 import org.ecsoya.iec60870.asdu.ASDU;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 
 /**
  * Handler for ASDUs that are not handled by other handlers (default handler)
  */
 @FunctionalInterface
 public interface ASDUHandler {
-	boolean invoke(Object parameter, IMasterConnection connection, ASDU asdu);
+	boolean invoke(Object parameter, IMasterCallable connection, ASDU asdu);
 }

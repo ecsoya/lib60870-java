@@ -94,7 +94,7 @@ public class LinkLayer {
 		return linkLayerParameters.getTimeoutRepeat();
 	}
 
-	void handleMessageAction(byte[] msg, int msgSize) throws Exception {
+	private Void handleMessageAction(byte[] msg, int msgSize) {
 		debugLog("RECV " + Arrays.toString(msg));
 
 		boolean handleMessage = true;
@@ -104,21 +104,27 @@ public class LinkLayer {
 		}
 
 		if (handleMessage) {
-
-			if (linkLayerMode == LinkLayerMode.BALANCED) {
-				handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
-			} else {
-				if (secondaryLinkLayer != null) {
-					parseHeaderSecondaryUnbalanced(buffer, msgSize);
-				} else if (primaryLinkLayer != null) {
+			try {
+				if (linkLayerMode == LinkLayerMode.BALANCED) {
 					handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
 				} else {
-					debugLog("ERROR: Neither primary nor secondary link layer available!");
+					if (secondaryLinkLayer != null) {
+						parseHeaderSecondaryUnbalanced(buffer, msgSize);
+					} else if (primaryLinkLayer != null) {
+						handleMessageBalancedAndPrimaryUnbalanced(buffer, msgSize);
+					} else {
+						debugLog("ERROR: Neither primary nor secondary link layer available!");
+					}
 				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		} else {
 			debugLog("Message ignored because of raw message handler");
 		}
+		return null;
 	}
 
 	public void handleMessageBalancedAndPrimaryUnbalanced(byte[] msg, int msgSize) throws Exception {
@@ -362,32 +368,18 @@ public class LinkLayer {
 		}
 	}
 
-	public void run() {
-		transceiver.readNextMessage(buffer, (byte[] msg, Integer msgSize) -> {
-			try {
-				handleMessageAction(msg, msgSize);
-			} catch (IOException e) {
-			} catch (Exception e) {
+	public void run() throws IOException {
+		transceiver.readNextMessage(buffer, (byte[] msg, Integer msgSize) -> handleMessageAction(msg, msgSize));
 
-				e.printStackTrace();
-			}
-			return null;
-		});
-
-		try {
-			if (linkLayerMode == LinkLayerMode.BALANCED) {
+		if (linkLayerMode == LinkLayerMode.BALANCED) {
+			primaryLinkLayer.runStateMachine();
+			secondaryLinkLayer.runStateMachine();
+		} else {
+			if (primaryLinkLayer != null) {
 				primaryLinkLayer.runStateMachine();
+			} else if (secondaryLinkLayer != null) {
 				secondaryLinkLayer.runStateMachine();
-			} else {
-				// TODO avoid redirection by LinkLayer class
-				if (primaryLinkLayer != null) {
-					primaryLinkLayer.runStateMachine();
-				} else if (secondaryLinkLayer != null) {
-					secondaryLinkLayer.runStateMachine();
-				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 
 	}
@@ -622,20 +614,20 @@ public class LinkLayer {
 		secondaryLinkLayer.setAddress(value);
 	}
 
-	public void SetPrimaryLinkLayer(PrimaryLinkLayer primaryLinkLayer) {
+	public void setPrimaryLinkLayer(PrimaryLinkLayer primaryLinkLayer) {
 		this.primaryLinkLayer = primaryLinkLayer;
 	}
 
-	public void SetReceivedRawMessageHandler(RawMessageHandler handler, Object parameter) {
+	public void setReceivedRawMessageHandler(RawMessageHandler handler, Object parameter) {
 		receivedRawMessageHandler = handler;
 		receivedRawMessageHandlerParameter = parameter;
 	}
 
-	public void SetSecondaryLinkLayer(SecondaryLinkLayer secondaryLinkLayer) {
+	public void setSecondaryLinkLayer(SecondaryLinkLayer secondaryLinkLayer) {
 		this.secondaryLinkLayer = secondaryLinkLayer;
 	}
 
-	public void SetSentRawMessageHandler(RawMessageHandler handler, Object parameter) {
+	public void setSentRawMessageHandler(RawMessageHandler handler, Object parameter) {
 		sentRawMessageHandler = handler;
 		sentRawMessageHandlerParameter = parameter;
 	}

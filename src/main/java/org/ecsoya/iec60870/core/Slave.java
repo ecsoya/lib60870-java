@@ -140,4 +140,5 @@ public abstract class Slave implements IConnection {
 		this.resetProcessHandler = handler;
 		this.resetProcessHandlerParameter = parameter;
 	}
+
 }

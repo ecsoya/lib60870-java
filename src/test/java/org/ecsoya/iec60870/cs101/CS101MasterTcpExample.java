@@ -14,7 +14,7 @@ import org.ecsoya.iec60870.layer.TcpServerVirtualSerialPort;
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
  */
-public class CS101MasterBalanced {
+public class CS101MasterTcpExample {
 	private static boolean asduReceivedHandler(Object parameter, int address, ASDU asdu) {
 		System.out.println(asdu.toString());
 
@@ -63,7 +63,12 @@ public class CS101MasterBalanced {
 
 		// This will start a separate thread!
 		// alternativley you can you master.Run() inside the loop
-		master.start();
+		try {
+			master.start();
+		} catch (ConnectionException e1) {
+			running = false;
+			e1.printStackTrace();
+		}
 
 		while (running) {
 

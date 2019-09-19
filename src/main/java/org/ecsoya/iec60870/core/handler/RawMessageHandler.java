@@ -21,5 +21,8 @@ package org.ecsoya.iec60870.core.handler;
  */
 @FunctionalInterface
 public interface RawMessageHandler {
+	/**
+	 * Return false will to discard all internal handlers.
+	 */
 	boolean invoke(Object parameter, byte[] message, int messageSize);
 }

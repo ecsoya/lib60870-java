@@ -25,7 +25,7 @@ import org.ecsoya.iec60870.asdu.CauseOfTransmission;
 import org.ecsoya.iec60870.asdu.InformationObject;
 import org.ecsoya.iec60870.asdu.ie.FileDirectory;
 import org.ecsoya.iec60870.asdu.ie.value.NameOfFile;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 
 public class FilesAvailable {
 	public static class CS101n104File {
@@ -85,7 +85,7 @@ public class FilesAvailable {
 		}
 	}
 
-	void sendDirectoy(IMasterConnection masterConnection, boolean spontaneous) {
+	void sendDirectoy(IMasterCallable masterConnection, boolean spontaneous) {
 		CauseOfTransmission cot;
 
 		if (spontaneous) {

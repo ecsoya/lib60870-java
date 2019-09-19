@@ -17,12 +17,12 @@
 package org.ecsoya.iec60870.core.handler;
 
 import org.ecsoya.iec60870.asdu.ASDU;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 
 /**
  * Handler for reset process command (C_RP_NA_1 - 105)
  */
 @FunctionalInterface
 public interface ResetProcessHandler {
-	boolean invoke(Object parameter, IMasterConnection connection, ASDU asdu, byte qrp);
+	boolean invoke(Object parameter, IMasterCallable connection, ASDU asdu, byte qrp);
 }

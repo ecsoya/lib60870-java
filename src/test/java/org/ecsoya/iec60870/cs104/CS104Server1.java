@@ -18,13 +18,13 @@ import org.ecsoya.iec60870.asdu.ie.SinglePointInformation;
 import org.ecsoya.iec60870.asdu.ie.SinglePointWithCP56Time2a;
 import org.ecsoya.iec60870.asdu.ie.value.QualityDescriptor;
 import org.ecsoya.iec60870.core.ConnectionException;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
  */
 public class CS104Server1 {
-	private static boolean interrogationHandler(Object parameter, IMasterConnection connection, ASDU asdu, byte qoi) {
+	private static boolean interrogationHandler(Object parameter, IMasterCallable connection, ASDU asdu, byte qoi) {
 		System.out.println("Interrogation for group " + qoi);
 
 		ApplicationLayerParameters cp = connection.getApplicationLayerParameters();
@@ -90,7 +90,7 @@ public class CS104Server1 {
 		return true;
 	}
 
-	private static boolean asduHandler(Object parameter, IMasterConnection connection, ASDU asdu) {
+	private static boolean asduHandler(Object parameter, IMasterCallable connection, ASDU asdu) {
 
 		if (asdu.getTypeId() == TypeID.C_SC_NA_1) {
 			System.out.println("Single command");
@@ -127,14 +127,14 @@ public class CS104Server1 {
 
 		server.setMaxQueueSize(10);
 
-		server.setInterrogationHandler((Object parameter, IMasterConnection connection, ASDU asdu,
+		server.setInterrogationHandler((Object parameter, IMasterCallable connection, ASDU asdu,
 				byte qoi) -> interrogationHandler(parameter, connection, asdu, qoi), null);
 
 		server.setASDUHandler(
-				(Object parameter, IMasterConnection connection, ASDU asdu) -> asduHandler(parameter, connection, asdu),
+				(Object parameter, IMasterCallable connection, ASDU asdu) -> asduHandler(parameter, connection, asdu),
 				null);
 
-		server.run();
+		server.start();
 
 		ASDU newAsdu = new ASDU(server.getApplicationLayerParameters(), CauseOfTransmission.INITIALIZED, false, false,
 				(byte) 0, 1, false);

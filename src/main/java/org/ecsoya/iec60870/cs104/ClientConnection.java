@@ -37,15 +37,14 @@ import org.ecsoya.iec60870.asdu.ie.DelayAcquisitionCommand;
 import org.ecsoya.iec60870.asdu.ie.InterrogationCommand;
 import org.ecsoya.iec60870.asdu.ie.ReadCommand;
 import org.ecsoya.iec60870.asdu.ie.ResetProcessCommand;
-import org.ecsoya.iec60870.core.ConnectionException;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 import org.ecsoya.iec60870.core.file.FileServer;
 import org.ecsoya.iec60870.tangible.OutObject;
 
 /**
  * Represents a client (master) connection
  */
-public class ClientConnection implements IMasterConnection {
+public class ClientConnection implements IMasterCallable {
 	/* data structure for k-size sent ASDU buffer */
 	private final static class SentASDU {
 		// required to identify message in server (low-priority) queue
@@ -282,7 +281,6 @@ public class ClientConnection implements IMasterConnection {
 		return true;
 	}
 
-	@Override
 	public void stop() {
 		running = false;
 	}
@@ -1217,10 +1215,6 @@ public class ClientConnection implements IMasterConnection {
 				debugLog("is not active");
 			}
 		}
-	}
-
-	@Override
-	public void run() throws ConnectionException {
 	}
 
 }

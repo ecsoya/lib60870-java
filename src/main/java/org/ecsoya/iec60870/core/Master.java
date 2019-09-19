@@ -16,6 +16,9 @@
  ******************************************************************************/
 package org.ecsoya.iec60870.core;
 
+import java.io.IOException;
+import java.net.SocketException;
+
 import org.ecsoya.iec60870.CP16Time2a;
 import org.ecsoya.iec60870.CP56Time2a;
 import org.ecsoya.iec60870.asdu.ASDU;
@@ -30,9 +33,9 @@ import org.ecsoya.iec60870.core.handler.RawMessageHandler;
 /**
  * Common interface for CS104 and CS101 balanced and unbalanced master
  */
-public abstract class Master {
+public abstract class Master implements IConnection {
 
-	protected boolean debug;
+	private boolean debugLog;
 
 	private RawMessageHandler recvRawMessageHandler = null;
 	private Object recvRawMessageHandlerParameter = null;
@@ -43,12 +46,29 @@ public abstract class Master {
 	private ASDUReceivedHandler asduReceivedHandler = null;
 	private Object asduReceivedHandlerParameter = null;
 
+	private boolean running = false;
+	private boolean connecting = false;
+	private ConnectionException connectingException = null;
+	private Thread workerThread = null;
+
+	private final ApplicationLayerParameters applicationLayerParameters;
+
+	public Master(ApplicationLayerParameters applicationLayerParameters) {
+		if (applicationLayerParameters != null) {
+			this.applicationLayerParameters = applicationLayerParameters;
+		} else {
+			this.applicationLayerParameters = new ApplicationLayerParameters();
+		}
+	}
+
 	/**
 	 * Get the application layer parameters used by this master instance
 	 *
 	 * @return used application layer parameters
 	 */
-	public abstract ApplicationLayerParameters getApplicationLayerParameters();
+	public ApplicationLayerParameters getApplicationLayerParameters() {
+		return applicationLayerParameters;
+	}
 
 	/**
 	 * Gets the file.
@@ -83,8 +103,18 @@ public abstract class Master {
 		return false;
 	}
 
-	public final boolean isDebug() {
-		return this.debug;
+	public boolean isDebugLog() {
+		return debugLog;
+	}
+
+	public void setDebugLog(boolean debugLog) {
+		this.debugLog = debugLog;
+	}
+
+	protected void debugLog(String message) {
+		if (debugLog) {
+			System.out.println(message);
+		}
 	}
 
 	/**
@@ -218,7 +248,7 @@ public abstract class Master {
 	}
 
 	public final void setDebug(boolean value) {
-		debug = value;
+		debugLog = value;
 	}
 
 	/**
@@ -244,4 +274,138 @@ public abstract class Master {
 		sentMessageHandler = handler;
 		sentMessageHandlerParameter = parameter;
 	}
+
+	public void checkConnection() throws ConnectionException {
+		if (running == false) {
+			if (connectingException != null) {
+				throw new ConnectionException(connectingException.getMessage(), connectingException);
+			} else {
+				throw new ConnectionException("not connected", new SocketException("10057"));
+			}
+		}
+	}
+
+	@Override
+	public final void start() throws ConnectionException {
+
+		connectAsync();
+
+		while ((running == false) && (connectingException == null)) {
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+
+				e.printStackTrace();
+			}
+		}
+
+		if (connectingException != null) {
+			throw new ConnectionException("Failed to connect: ", connectingException);
+		}
+	}
+
+	private void handleConnection() {
+		connecting = true;
+		try {
+			beforeConnection();
+
+			running = startConnection();
+
+			afterConnection();
+
+			if (running) {
+				loopReceiveMessage();
+			}
+
+			closeConnection();
+		} catch (ConnectionException e) {
+			running = false;
+			connectingException = e;
+			closeConnection();
+		} finally {
+			connecting = false;
+		}
+	}
+
+	/**
+	 * Do something after connection
+	 */
+	protected void afterConnection() {
+
+	}
+
+	/**
+	 * Close the connection
+	 */
+	protected void closeConnection() {
+	}
+
+	/**
+	 * Do something before connecting.
+	 */
+	protected void beforeConnection() {
+		running = false;
+		connectingException = null;
+	}
+
+	protected abstract boolean startConnection() throws ConnectionException;
+
+	private void connectAsync() throws ConnectionException {
+		if ((running == false) && (connecting == false)) {
+
+			workerThread = new Thread(() -> handleConnection());
+
+			workerThread.start();
+		} else {
+			if (running) {
+				throw new ConnectionException("already connected",
+						new SocketException("10056")); /* WSAEISCONN - Socket is already connected */
+			} else {
+				throw new ConnectionException("already connecting",
+						new SocketException("10037")); /* WSAEALREADY - Operation already in progress */
+			}
+
+		}
+	}
+
+	protected final void loopReceiveMessage() {
+		boolean loopRunning = running;
+		while (loopRunning) {
+			try {
+				run();
+			} catch (IOException e1) {
+				loopRunning = false;
+				debugLog("Run Failed: " + e1.getMessage());
+			}
+
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public final void stop() {
+		if (running) {
+			running = false;
+
+			closeConnection();
+
+			if (workerThread != null) {
+				try {
+					workerThread.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Run a the message receiver and state machines once. Can be used if no threads
+	 * should be used.
+	 */
+	public abstract void run() throws IOException;
 }

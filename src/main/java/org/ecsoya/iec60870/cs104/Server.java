@@ -26,6 +26,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.net.ServerSocketFactory;
+
 import org.ecsoya.iec60870.asdu.ASDU;
 import org.ecsoya.iec60870.asdu.ApplicationLayerParameters;
 import org.ecsoya.iec60870.core.ConnectionException;
@@ -42,7 +44,7 @@ public class Server extends Slave {
 
 	private boolean running = false;
 
-	private ServerSocket listeningSocket;
+	private ServerSocket sockerServer;
 
 	private int maxQueueSize = 1000;
 	private int maxOpenConnections = 10;
@@ -72,8 +74,7 @@ public class Server extends Slave {
 	/// Create a new server using default connection parameters
 	/// </summary>
 	public Server() {
-		this.apciParameters = new APCIParameters();
-		this.alParameters = new ApplicationLayerParameters();
+		this(new APCIParameters(), new ApplicationLayerParameters());
 	}
 
 	/// <summary>
@@ -81,25 +82,13 @@ public class Server extends Slave {
 	/// </summary>
 	/// <param name="parameters">Connection parameters</param>
 	public Server(APCIParameters apciParameters, ApplicationLayerParameters alParameters) {
-		this.apciParameters = apciParameters;
-		this.alParameters = alParameters;
+		this(apciParameters, alParameters, null);
 	}
 
 	public Server(APCIParameters apciParameters, ApplicationLayerParameters alParameters,
 			TlsSecurityInformation securityInfo) {
 		this.apciParameters = apciParameters;
 		this.alParameters = alParameters;
-		this.securityInfo = securityInfo;
-
-		if (securityInfo != null) {
-			this.localPort = 19998;
-		}
-	}
-
-	public Server(TlsSecurityInformation securityInfo) {
-		this.apciParameters = new APCIParameters();
-		this.alParameters = new ApplicationLayerParameters();
-
 		this.securityInfo = securityInfo;
 
 		if (securityInfo != null) {
@@ -214,7 +203,7 @@ public class Server extends Slave {
 
 			try {
 
-				Socket newSocket = listeningSocket.accept();
+				Socket newSocket = sockerServer.accept();
 
 				if (newSocket != null) {
 					debugLog("New connection");
@@ -319,21 +308,19 @@ public class Server extends Slave {
 	/// Start the server. Listen to client connections.
 	/// </summary>
 	@Override
-	public void run() throws ConnectionException {
+	public void start() throws ConnectionException {
 		SocketAddress localEp = null;
 		try {
 			InetAddress ipAddress = InetAddress.getByName(localHostname);
 			localEp = new InetSocketAddress(ipAddress, localPort);
 		} catch (UnknownHostException e) {
-			throw new ConnectionException("", e);
+			throw new ConnectionException("Unknow host:", e);
 		}
 		try {
 			// Create a TCP/IP socket.
-			listeningSocket = new ServerSocket();
+			sockerServer = ServerSocketFactory.getDefault().createServerSocket();
 
-			listeningSocket.bind(localEp);
-
-//		listeningSocket.Listen(100);
+			sockerServer.bind(localEp);
 
 			Thread acceptThread = new Thread(() -> serverAcceptThread());
 
@@ -344,8 +331,7 @@ public class Server extends Slave {
 			acceptThread.start();
 
 		} catch (IOException e) {
-
-			e.printStackTrace();
+			throw new ConnectionException("Socker Server:", e);
 		}
 	}
 
@@ -357,7 +343,7 @@ public class Server extends Slave {
 		running = false;
 
 		try {
-			listeningSocket.close();
+			sockerServer.close();
 
 			// close all open connection
 			for (ClientConnection connection : allOpenConnections) {
@@ -368,12 +354,6 @@ public class Server extends Slave {
 			System.out.println(e);
 		}
 
-		try {
-			listeningSocket.close();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
 	}
 
 	void unmarkAllASDUs() {

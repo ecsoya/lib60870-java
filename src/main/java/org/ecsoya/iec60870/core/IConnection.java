@@ -21,7 +21,13 @@ package org.ecsoya.iec60870.core;
  */
 public interface IConnection {
 
-	void run() throws ConnectionException;
+	/**
+	 * Start a connection until closed...
+	 */
+	void start() throws ConnectionException;
 
-	void stop();
+	/**
+	 * Close current connection.
+	 */
+	void stop() throws ConnectionException;
 }

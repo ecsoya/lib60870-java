@@ -16,6 +16,8 @@
  ******************************************************************************/
 package org.ecsoya.iec60870.serial;
 
+import java.io.IOException;
+
 /**
  * @author Jin Liu (jin.liu@soyatec.com)
  */
@@ -34,5 +36,5 @@ public interface SerialPort {
 
 	boolean isOpen();
 
-	boolean open();
+	boolean open() throws IOException;
 }

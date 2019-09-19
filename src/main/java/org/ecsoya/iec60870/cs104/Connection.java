@@ -17,17 +17,20 @@
 
 package org.ecsoya.iec60870.cs104;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
+
+import javax.net.SocketFactory;
 
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.CP16Time2a;
@@ -105,8 +108,6 @@ public class Connection extends Master {
 
 	private int outStandingTestFRConMessages = 0;
 
-	private Thread workerThread = null;
-
 	private int unconfirmedReceivedIMessages; // number of unconfirmed messages received
 	/* T2 timeout handling */
 	private long lastConfirmationTime; // timestamp when the last confirmation message was sent
@@ -114,7 +115,7 @@ public class Connection extends Master {
 	private boolean timeoutT2Triggered = false;
 	private Socket socket = null;
 
-	private OutputStream netStream = null;
+	private DataOutputStream netStream = null;
 
 	private boolean autostart = true;
 
@@ -122,19 +123,14 @@ public class Connection extends Master {
 	private String hostname;
 
 	protected int tcpPort;
-	private boolean running = false;
-	private boolean connecting = false;
-	private boolean socketError;
 
-	private SocketException lastException;
 	private int connectionID;
 
 	private APCIParameters apciParameters;
-	private ApplicationLayerParameters alParameters;
 
 	private ConnectionStatistics statistics = new ConnectionStatistics();
 
-	private int connectTimeoutInMs = 1000;
+	private int connectTimeoutInMs = 5000;
 
 	private ConnectionHandler connectionHandler = null;
 
@@ -145,7 +141,7 @@ public class Connection extends Master {
 	}
 
 	public Connection(String hostname, APCIParameters apciParameters, ApplicationLayerParameters alParameters) {
-		this(hostname, 2404, apciParameters.Clone(), alParameters.clone());
+		this(hostname, 2404, apciParameters, alParameters);
 	}
 
 	public Connection(String hostname, int tcpPort) {
@@ -154,18 +150,18 @@ public class Connection extends Master {
 
 	public Connection(String hostname, int tcpPort, APCIParameters apciParameters,
 			ApplicationLayerParameters alParameters) {
-		setup(hostname, apciParameters.Clone(), alParameters.clone(), tcpPort);
+		super(alParameters);
+		this.hostname = hostname;
+		this.apciParameters = apciParameters;
+		this.tcpPort = tcpPort;
+		this.connectTimeoutInMs = apciParameters.getT0() * 1000;
+
+		connectionCounter++;
+		connectionID = connectionCounter;
 	}
 
-	public void cancel() {
-		if (socket != null) {
-			try {
-				socket.close();
-			} catch (IOException e) {
-
-				e.printStackTrace();
-			}
-		}
+	public int getConnectionID() {
+		return connectionID;
 	}
 
 	private boolean checkConfirmTimeout(long currentTime) {
@@ -213,7 +209,7 @@ public class Connection extends Master {
 			unconfirmedReceivedIMessages++;
 
 			try {
-				ASDU asdu = new ASDU(alParameters, buffer, 6, msgSize);
+				ASDU asdu = new ASDU(getApplicationLayerParameters(), buffer, 6, msgSize);
 
 				boolean messageHandled = false;
 
@@ -247,7 +243,7 @@ public class Connection extends Master {
 				debugLog("RCVD TESTFR_ACT");
 				debugLog("SEND TESTFR_CON");
 
-				sendMessage(TESTFR_CON_MSG, 0, TESTFR_CON_MSG.length);
+				writeMessage(TESTFR_CON_MSG, 0, TESTFR_CON_MSG.length);
 
 			} else if (buffer[2] == 0x83) { /* TESTFR_CON */
 				debugLog("RCVD TESTFR_CON");
@@ -256,20 +252,16 @@ public class Connection extends Master {
 			} else if (buffer[2] == 0x07) { /* STARTDT ACT */
 				debugLog("RCVD STARTDT_ACT");
 
-				sendMessage(STARTDT_CON_MSG, 0, STARTDT_CON_MSG.length);
+				writeMessage(STARTDT_CON_MSG, 0, STARTDT_CON_MSG.length);
 			} else if (buffer[2] == 0x0b) { /* STARTDT_CON */
 				debugLog("RCVD STARTDT_CON");
 
-				if (connectionHandler != null) {
-					connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.STARTDT_CON_RECEIVED);
-				}
+				handleConnectionChanged(ConnectionEvent.STARTDT_CON_RECEIVED);
 
 			} else if (buffer[2] == 0x23) { /* STOPDT_CON */
 				debugLog("RCVD STOPDT_CON");
 
-				if (connectionHandler != null) {
-					connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.STOPDT_CON_RECEIVED);
-				}
+				handleConnectionChanged(ConnectionEvent.STOPDT_CON_RECEIVED);
 			}
 
 		} else {
@@ -357,66 +349,12 @@ public class Connection extends Master {
 		return true;
 	}
 
-	public void close() {
-		if (running) {
-			running = false;
-			try {
-				workerThread.join();
-			} catch (InterruptedException e) {
+	@Override
+	protected void beforeConnection() {
+		super.beforeConnection();
+		resetConnection();
 
-				e.printStackTrace();
-			}
-		}
-	}
-
-	/// <summary>
-/// Connect this instance.
-/// </summary>
-///
-/// The function will throw a SocketException if the connection attempt is rejected or timed out.
-/// <exception cref="ConnectionException">description</exception>
-	public void connect() throws ConnectionException {
-
-		connectAsync();
-
-		while ((running == false) && (socketError == false)) {
-			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-
-				e.printStackTrace();
-			}
-		}
-
-		if (socketError) {
-			throw new ConnectionException(lastException.getMessage(), lastException);
-		}
-	}
-
-	/// <summary>
-/// Connects to the server (outstation). This is a non-blocking call. Before using the connection
-/// you have to check if the connection is already connected and running.
-/// </summary>
-/// <exception cref="ConnectionException">description</exception>
-	public void connectAsync() throws ConnectionException {
-		if ((running == false) && (connecting == false)) {
-			resetConnection();
-
-			resetT3Timeout();
-
-			workerThread = new Thread(() -> handleConnection());
-
-			workerThread.start();
-		} else {
-			if (running) {
-				throw new ConnectionException("already connected",
-						new SocketException("10056")); /* WSAEISCONN - Socket is already connected */
-			} else {
-				throw new ConnectionException("already connecting",
-						new SocketException("10037")); /* WSAEALREADY - Operation already in progress */
-			}
-
-		}
+		resetT3Timeout();
 	}
 
 	private void connectSocketWithTimeout() throws SocketException {
@@ -426,34 +364,37 @@ public class Connection extends Master {
 		try {
 			ipAddress = InetAddress.getByName(hostname);
 			remoteEP = new InetSocketAddress(ipAddress, tcpPort);
-		} catch (Exception e) {
+		} catch (UnknownHostException e) {
 			throw new SocketException("87"); // wrong argument
 		}
 
-		// Create a TCP/IP socket.
-		socket = new Socket();
-
 		try {
-			socket.connect(remoteEP, connectTimeoutInMs);
+			// Create a TCP/IP socket.
+			socket = SocketFactory.getDefault().createSocket();
+			socket.setSoTimeout(connectTimeoutInMs);
 			socket.setTcpNoDelay(true);
-			netStream = socket.getOutputStream();
+			socket.connect(remoteEP, connectTimeoutInMs);
+
 		} catch (Exception e) {
 			socket = null;
 			debugLog("ObjectDisposedException -> Connect canceled");
 
 			throw new SocketException("10060"); // WSA_OPERATION_ABORTED
 		}
-	}
 
-	private void debugLog(String message) {
-		if (debug) {
-			System.out.println("CS104 MASTER CONNECTION " + connectionID + ": " + message);
+		try {
+			netStream = new DataOutputStream(socket.getOutputStream());
+		} catch (IOException e) {
+			throw new SocketException("10070"); // WSA_OPERATION_ABORTED
 		}
 	}
 
 	@Override
-	public ApplicationLayerParameters getApplicationLayerParameters() {
-		return alParameters;
+	protected void debugLog(String message) {
+		if (isDebugLog()) {
+			System.out.print("CS104 MASTER: ");
+		}
+		super.debugLog(message);
 	}
 
 	public void getDirectory(int commonAddress) throws ConnectionException {
@@ -477,10 +418,6 @@ public class Connection extends Master {
 		fileClient.requestFile(commonAddress, informationObjectAddress, nameOfFile, receiver);
 	}
 
-	public ApplicationLayerParameters getParameters() {
-		return this.alParameters;
-	}
-
 	public int getReceiveSequenceNumber() {
 		return receiveSequenceNumber;
 	}
@@ -493,151 +430,112 @@ public class Connection extends Master {
 		return this.statistics;
 	}
 
-	private void handleConnection() {
-
-		byte[] bytes = new byte[300];
-
+	@Override
+	protected boolean startConnection() throws ConnectionException {
 		try {
+			// Connect to a remote device.
+			connectSocketWithTimeout();
 
-			try {
+			debugLog("Socket connected to " + socket.getRemoteSocketAddress().toString());
 
-				connecting = true;
+			handleConnectionChanged(ConnectionEvent.OPENED);
 
-				try {
-					// Connect to a remote device.
-					connectSocketWithTimeout();
+			return true;
 
-					debugLog("Socket connected to " + socket.getRemoteSocketAddress().toString());
+		} catch (SocketException se) {
+			debugLog("SocketException: " + se.toString());
 
-					if (autostart) {
-						netStream.write(STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG.length);
-
-						statistics.increaseSentMsgCounter();
-					}
-
-					running = true;
-					socketError = false;
-					connecting = false;
-
-					if (connectionHandler != null) {
-						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.OPENED);
-					}
-
-				} catch (SocketException se) {
-					debugLog("SocketException: " + se.toString());
-
-					running = false;
-					socketError = true;
-					lastException = se;
-
-					if (connectionHandler != null) {
-						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.CONNECT_FAILED);
-					}
-				}
-
-				if (running) {
-
-					boolean loopRunning = running;
-
-					while (loopRunning) {
-
-						boolean suspendThread = true;
-
-						try {
-							// Receive a message from from the remote device.
-							int bytesRec = receiveMessage(bytes);
-
-							if (bytesRec > 0) {
-
-//                            DebugLog("RCVD: " + BitConverter.ToString(bytes, 0, bytesRec));
-								debugLog("RCVD: " + Arrays.toString(ByteBuffer.wrap(bytes, 0, bytesRec).array()));
-
-								statistics.increaseRcvdMsgCounter();
-
-								boolean handleMessage = handleReceivedMessage(bytes, bytesRec);
-
-								if (handleMessage) {
-									if (checkMessage(bytes, bytesRec) == false) {
-										/* close connection on error */
-										loopRunning = false;
-									}
-								}
-
-								if (unconfirmedReceivedIMessages >= apciParameters.getW()) {
-									lastConfirmationTime = System.currentTimeMillis();
-
-									unconfirmedReceivedIMessages = 0;
-									timeoutT2Triggered = false;
-
-									sendSMessage();
-								}
-
-								suspendThread = false;
-							} else if (bytesRec == -1) {
-								loopRunning = false;
-							}
-
-							if (handleTimeouts() == false) {
-								loopRunning = false;
-							}
-
-							if (isConnected() == false) {
-								loopRunning = false;
-							}
-
-							if (useSendMessageQueue) {
-								if (sendNextWaitingASDU() == true) {
-									suspendThread = false;
-								}
-							}
-
-							if (suspendThread) {
-								Thread.sleep(10);
-							}
-
-						} catch (SocketException e) {
-							loopRunning = false;
-						} catch (IOException e) {
-							debugLog("IOException: " + e.getMessage());
-							loopRunning = false;
-						} catch (ConnectionException e) {
-							loopRunning = false;
-						}
-					}
-
-					debugLog("CLOSE CONNECTION!");
-
-					// Release the socket.
-					try {
-						socket.shutdownInput();
-						socket.shutdownOutput();
-					} catch (SocketException e) {
-					}
-
-					socket.close();
-
-					netStream.close();
-
-					if (connectionHandler != null) {
-						connectionHandler.invoke(connectionHandlerParameter, ConnectionEvent.CLOSED);
-					}
-				}
-
-			} catch (Exception ane) {
-				connecting = false;
-//				DebugLog("ArgumentNullException: " + ane.ToString());
-//			} catch (SocketException se) {
-//				DebugLog("SocketException: " + se.ToString());
-//			} catch (Exception e) {
-//				DebugLog("Unexpected exception: " + e.ToString());
-			}
-
-		} catch (Exception e) {
-			debugLog(e.getMessage());
+			handleConnectionChanged(ConnectionEvent.CONNECT_FAILED);
+			throw new ConnectionException(se);
 		}
 
-		running = false;
-		connecting = false;
+	}
+
+	@Override
+	public void run() throws IOException {
+		byte[] bytes = new byte[300];
+		IOException exception = null;
+		try {
+			// Receive a message from from the remote device.
+			int bytesRec = receiveMessage(bytes);
+
+			if (bytesRec > 0) {
+
+//                DebugLog("RCVD: " + BitConverter.ToString(bytes, 0, bytesRec));
+				debugLog("RCVD: " + Arrays.toString(ByteBuffer.wrap(bytes, 0, bytesRec).array()));
+
+				statistics.increaseRcvdMsgCounter();
+
+				boolean handleMessage = handleReceivedMessage(bytes, bytesRec);
+
+				if (handleMessage) {
+					if (checkMessage(bytes, bytesRec) == false) {
+						/* close connection on error */
+						exception = new IOException("Invalid message");
+					}
+				}
+
+				if (unconfirmedReceivedIMessages >= apciParameters.getW()) {
+					lastConfirmationTime = System.currentTimeMillis();
+
+					unconfirmedReceivedIMessages = 0;
+					timeoutT2Triggered = false;
+
+					sendSMessage();
+				}
+
+			} else if (bytesRec == -1) {
+				exception = new IOException("no message");
+			}
+
+			if (handleTimeouts() == false) {
+				exception = new IOException("timeout");
+			}
+
+			if (useSendMessageQueue) {
+				if (sendNextWaitingASDU() == true) {
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		} catch (IOException e) {
+			exception = e;
+		} catch (ConnectionException e) {
+			exception = new IOException("no connect", e);
+		}
+		if (exception != null) {
+			throw exception;
+		}
+	}
+
+	protected void closeConnection() {
+		// Release the socket.
+		try {
+			socket.shutdownInput();
+			socket.shutdownOutput();
+			socket.close();
+
+			netStream.close();
+
+			handleConnectionChanged(ConnectionEvent.CLOSED);
+		} catch (Exception e) {
+
+			debugLog("Close socket failed: " + e.getMessage());
+		} finally {
+			socket = null;
+			netStream = null;
+		}
+
+	}
+
+	private void handleConnectionChanged(ConnectionEvent event) {
+		if (connectionHandler != null) {
+			connectionHandler.invoke(connectionHandlerParameter, event);
+		}
 	}
 
 	private boolean handleTimeouts() throws ConnectionException {
@@ -697,12 +595,9 @@ public class Connection extends Master {
 		return true;
 	}
 
-	private void internalSendASDU(ASDU asdu) throws ConnectionException, IOException {
+	private void internalSendASDU(ASDU asdu) throws ConnectionException {
+		checkConnection();
 		synchronized (socket) {
-
-			if (running == false) {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
 
 			if (useSendMessageQueue) {
 				synchronized (waitingToBeSent) {
@@ -729,20 +624,18 @@ public class Connection extends Master {
 		return checkSequenceNumbers;
 	}
 
-	private boolean isConnected() {
-		if (socket == null || !socket.isConnected()) {
-			debugLog("Disconnected: ");
-			return false;
-		}
-		if (socket.isClosed()) {
-			debugLog("Closed: ");
-			return false;
-		}
-		return true;
-	}
+	@Override
+	protected void afterConnection() {
+		super.afterConnection();
 
-	public boolean isRunning() {
-		return this.running;
+		// auto start
+		try {
+			if (autostart) {
+				writeMessage(STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG.length);
+			}
+		} catch (ConnectionException e1) {
+			e1.printStackTrace();
+		}
 	}
 
 	private boolean isSentBufferFull() {
@@ -849,9 +742,6 @@ public class Connection extends Master {
 
 		uMessageTimeout = 0;
 
-		socketError = false;
-		lastException = null;
-
 		maxSentASDUs = apciParameters.getK();
 		oldestSentASDU = -1;
 		newestSentASDU = -1;
@@ -870,33 +760,17 @@ public class Connection extends Master {
 
 	@Override
 	public void sendASDU(ASDU asdu) throws ConnectionException {
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			throw e;
-		} catch (IOException e) {
-
-			throw new ConnectionException("Write failed: ", e);
-		}
+		internalSendASDU(asdu);
 	}
 
 	@Override
 	public void sendClockSyncCommand(int commonAddress, CP56Time2a time) throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.ACTIVATION, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new ClockSynchronizationCommand(0, time));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 /// The type ID has to match the type of the InformationObject!
@@ -914,63 +788,39 @@ public class Connection extends Master {
 	public void sendControlCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			InformationObject informationObject) throws ConnectionException {
 
-		ASDU controlCommand = new ASDU(alParameters, causeOfTransmission, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU controlCommand = new ASDU(getApplicationLayerParameters(), causeOfTransmission, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		controlCommand.addInformationObject(informationObject);
 
-		try {
-			internalSendASDU(controlCommand);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(controlCommand);
 	}
 
 	@Override
 	public void sendCounterInterrogationCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			byte qualifierOfCounter) throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, causeOfTransmission, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), causeOfTransmission, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new CounterInterrogationCommand(0, qualifierOfCounter));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	@Override
 	public void sendDelayAcquisitionCommand(CauseOfTransmission causeOfTransmission, int commonAddress,
 			CP16Time2a delay) throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.ACTIVATION, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new DelayAcquisitionCommand(0, delay));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	private int sendIMessage(ASDU asdu) throws ConnectionException {
 		BufferFrame frame = new BufferFrame(new byte[260], 6); /* reserve space for ACPI */
-		asdu.encode(frame, alParameters);
+		asdu.encode(frame, getApplicationLayerParameters());
 
 		byte[] buffer = frame.getBuffer();
 
@@ -987,22 +837,14 @@ public class Connection extends Master {
 		buffer[4] = (byte) ((receiveSequenceNumber % 128) * 2);
 		buffer[5] = (byte) (receiveSequenceNumber / 128);
 
-		if (running) {
-			sendMessage(buffer, 0, msgSize);
+		writeMessage(buffer, 0, msgSize);
 
-			sendSequenceNumber = (sendSequenceNumber + 1) % 32768;
+		sendSequenceNumber = (sendSequenceNumber + 1) % 32768;
 
-			unconfirmedReceivedIMessages = 0;
-			timeoutT2Triggered = false;
+		unconfirmedReceivedIMessages = 0;
+		timeoutT2Triggered = false;
 
-			return sendSequenceNumber;
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		return sendSequenceNumber;
 
 	}
 
@@ -1032,22 +874,16 @@ public class Connection extends Master {
 	@Override
 	public void sendInterrogationCommand(CauseOfTransmission cot, int commonAddress, byte qualifierOfInterrogation)
 			throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, cot, false, false, (byte) alParameters.getOA(), commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), cot, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new InterrogationCommand(0, qualifierOfInterrogation));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
-	private void sendMessage(byte[] buf, int offset, int length) throws ConnectionException {
+	private void writeMessage(byte[] buf, int offset, int length) throws ConnectionException {
+		checkConnection();
 		try {
 			netStream.write(buf, offset, length);
 
@@ -1063,9 +899,7 @@ public class Connection extends Master {
 	private boolean sendNextWaitingASDU() throws ConnectionException {
 		boolean sentAsdu = false;
 
-		if (running == false) {
-			throw new ConnectionException("connection lost");
-		}
+		checkConnection();
 
 		try {
 
@@ -1090,7 +924,6 @@ public class Connection extends Master {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			running = false;
 			throw new ConnectionException("connection lost");
 		}
 
@@ -1099,39 +932,23 @@ public class Connection extends Master {
 
 	@Override
 	public void sendReadCommand(int commonAddress, int informationObjectAddress) throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.REQUEST, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.REQUEST, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new ReadCommand(informationObjectAddress));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	@Override
 	public void sendResetProcessCommand(CauseOfTransmission causeOfTransmission, int commonAddress, byte qualifier)
 			throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.ACTIVATION, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new ResetProcessCommand(0, qualifier));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	private void sendSMessage() throws ConnectionException {
@@ -1144,120 +961,56 @@ public class Connection extends Master {
 		msg[4] = (byte) ((receiveSequenceNumber % 128) * 2);
 		msg[5] = (byte) (receiveSequenceNumber / 128);
 
-		sendMessage(msg, 0, msg.length);
+		writeMessage(msg, 0, msg.length);
 
 	}
 
 	public void sendStartDT() throws ConnectionException {
-		if (running) {
-			sendMessage(STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG.length);
 	}
 
 	protected void sendStartDT_CON() throws ConnectionException {
-		if (running) {
-			sendMessage(STARTDT_CON_MSG, 0, STARTDT_CON_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(STARTDT_CON_MSG, 0, STARTDT_CON_MSG.length);
 	}
 
 	/// <summary>
 /// Stop data transmission on this connection
 /// </summary>
 	public void sendStopDT() throws ConnectionException {
-		if (running) {
-			sendMessage(STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG.length);
 	}
 
 	protected void sendStopDT_CON() throws ConnectionException {
-		if (running) {
-			sendMessage(STOPDT_CON_MSG, 0, STOPDT_CON_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(STOPDT_CON_MSG, 0, STOPDT_CON_MSG.length);
 	}
 
 	@Override
 	public void sendTestCommand(int commonAddress) throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.ACTIVATION, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new TestCommand());
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	@Override
 	public void sendTestCommandWithCP56Time2a(int commonAddress, short testSequenceNumber, CP56Time2a timestamp)
 			throws ConnectionException {
-		ASDU asdu = new ASDU(alParameters, CauseOfTransmission.ACTIVATION, false, false, (byte) alParameters.getOA(),
-				commonAddress, false);
+		ASDU asdu = new ASDU(getApplicationLayerParameters(), CauseOfTransmission.ACTIVATION, false, false,
+				(byte) getApplicationLayerParameters().getOA(), commonAddress, false);
 
 		asdu.addInformationObject(new TestCommandWithCP56Time2a(testSequenceNumber, timestamp));
 
-		try {
-			internalSendASDU(asdu);
-		} catch (ConnectionException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
+		internalSendASDU(asdu);
 	}
 
 	protected void sendTestFR_ACT() throws ConnectionException {
-		if (running) {
-			sendMessage(TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG.length);
 	}
 
 	protected void sendTestFR_CON() throws ConnectionException {
-		if (running) {
-			sendMessage(TESTFR_CON_MSG, 0, TESTFR_CON_MSG.length);
-		} else {
-			if (lastException != null) {
-				throw new ConnectionException(lastException.getMessage(), lastException);
-			} else {
-				throw new ConnectionException("not connected", new SocketException("10057"));
-			}
-		}
+		writeMessage(TESTFR_CON_MSG, 0, TESTFR_CON_MSG.length);
 	}
 
 	public void setAutostart(boolean autostart) {
@@ -1289,18 +1042,6 @@ public class Connection extends Master {
 
 	public void setSendSequenceNumber(int sendSequenceNumber) {
 		this.sendSequenceNumber = sendSequenceNumber;
-	}
-
-	private void setup(String hostname, APCIParameters apciParameters, ApplicationLayerParameters alParameters,
-			int tcpPort) {
-		this.hostname = hostname;
-		this.alParameters = alParameters;
-		this.apciParameters = apciParameters;
-		this.tcpPort = tcpPort;
-		this.connectTimeoutInMs = apciParameters.getT0() * 1000;
-
-		connectionCounter++;
-		connectionID = connectionCounter;
 	}
 
 	public void setUseSendMessageQueue(boolean useSendMessageQueue) {

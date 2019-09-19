@@ -18,12 +18,12 @@ package org.ecsoya.iec60870.core.handler;
 
 import org.ecsoya.iec60870.CP56Time2a;
 import org.ecsoya.iec60870.asdu.ASDU;
-import org.ecsoya.iec60870.core.IMasterConnection;
+import org.ecsoya.iec60870.core.IMasterCallable;
 
 /**
  * Handler for clock synchronization command (C_CS_NA_1 - 103)
  */
 @FunctionalInterface
 public interface ClockSynchronizationHandler {
-	boolean invoke(Object parameter, IMasterConnection connection, ASDU asdu, CP56Time2a newTime);
+	boolean invoke(Object parameter, IMasterCallable connection, ASDU asdu, CP56Time2a newTime);
 }

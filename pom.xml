@@ -1,51 +1,53 @@
-<!--
-      lib60870-java is free software: you can redistribute it and/or modify
-      it under the terms of the GNU General Public License as published by
-      the Free Software Foundation, either version 3 of the License, or
-      (at your option) any later version.
-   
-      You should have received a copy of the GNU General Public License
-      along with  lib60870-java.  If not, see <http://www.gnu.org/licenses/>.
- -->
-<!--
-      lib60870-java is free software: you can redistribute it and/or modify
-      it under the terms of the GNU General Public License as published by
-      the Free Software Foundation, either version 3 of the License, or
-      (at your option) any later version.
-   
-      You should have received a copy of the GNU General Public License
-      along with  lib60870-java.  If not, see <http://www.gnu.org/licenses/>.
-   
- -->
-<!--
-      lib60870-java is free software: you can redistribute it and/or modify
-      it under the terms of the GNU General Public License as published by
-      the Free Software Foundation, either version 3 of the License, or
-      (at your option) any later version.
-   
-      You should have received a copy of the GNU General Public License
-      along with  lib60870-java.  If not, see <http://www.gnu.org/licenses/>.
-   
- -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.ecsoya.lib60870</groupId>
-	<artifactId>lib60870-java</artifactId>
+	<artifactId>lib60870-java-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>lib60870-java</name>
+	<name>lib60870-java-parent</name>
+	<packaging>pom</packaging>
 
 
 	<properties>
 		<java.version>1.8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
-	<dependencies>
+	<repositories>
+		<repository>
+			<id>rdc-snapshots</id>
+			<name>local private nexus</name>
+			<url>https://repo.rdc.aliyun.com/repository/42210-snapshot-BITvCn/</url>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>rdc-releases</id>
+			<name>intranet public 
+		groups</name>
+			<url>https://repo.rdc.aliyun.com/repository/42210-release-mI5S4B/</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
 
-
-	</dependencies>
-
+	<distributionManagement>
+		<repository>
+			<id>rdc-releases</id>
+			<url>https://repo.rdc.aliyun.com/repository/42210-release-mI5S4B/</url>
+		</repository>
+		<snapshotRepository>
+			<id>rdc-snapshots</id>
+			<url>https://repo.rdc.aliyun.com/repository/42210-snapshot-BITvCn/</url>
+		</snapshotRepository>
+	</distributionManagement>
 	<build>
 		<plugins>
 			<plugin>
@@ -60,4 +62,7 @@
 		</plugins>
 
 	</build>
+	<modules>
+		<module>lib60870-java</module>
+	</modules>
 </project>

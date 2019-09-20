@@ -176,7 +176,7 @@ public class CS104Client1 {
 
 		Connection con = new Connection("127.0.0.1");
 
-		con.setDebug(true);
+		con.setDebugOutput((msg) -> System.out.println(msg));
 
 		con.setASDUReceivedHandler(
 				(Object parameter, int address, ASDU asdu) -> asduReceivedHandler(parameter, address, asdu), null);

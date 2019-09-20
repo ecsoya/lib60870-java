@@ -134,10 +134,7 @@ public class CS101Master extends Master implements IPrimaryLinkLayerCallbacks {
 	}
 
 	protected void debugLog(String msg) {
-		if (isDebugLog()) {
-			System.out.print("CS101 MASTER: ");
-		}
-		super.debugLog(msg);
+		super.debugLog("CS101 MASTER: " + msg);
 	}
 
 	private BufferFrame dequeueUserData() {

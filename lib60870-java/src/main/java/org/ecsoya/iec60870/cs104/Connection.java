@@ -391,10 +391,7 @@ public class Connection extends Master {
 
 	@Override
 	protected void debugLog(String message) {
-		if (isDebugLog()) {
-			System.out.print("CS104 MASTER: ");
-		}
-		super.debugLog(message);
+		super.debugLog("CS104 MASTER: " + message);
 	}
 
 	public void getDirectory(int commonAddress) throws ConnectionException {

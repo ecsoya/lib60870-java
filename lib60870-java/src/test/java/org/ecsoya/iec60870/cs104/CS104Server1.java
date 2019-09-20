@@ -123,7 +123,7 @@ public class CS104Server1 {
 
 		Server server = new Server();
 
-		server.setDebugOutput(true);
+		server.setDebugOutput((msg) -> System.out.println(msg));
 
 		server.setMaxQueueSize(10);
 

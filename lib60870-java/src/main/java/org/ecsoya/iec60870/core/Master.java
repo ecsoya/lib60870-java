@@ -18,6 +18,7 @@ package org.ecsoya.iec60870.core;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.function.Consumer;
 
 import org.ecsoya.iec60870.CP16Time2a;
 import org.ecsoya.iec60870.CP56Time2a;
@@ -35,7 +36,7 @@ import org.ecsoya.iec60870.core.handler.RawMessageHandler;
  */
 public abstract class Master implements IConnection {
 
-	private boolean debugLog;
+	private Consumer<String> debugOutput;
 
 	private RawMessageHandler recvRawMessageHandler = null;
 	private Object recvRawMessageHandlerParameter = null;
@@ -103,17 +104,17 @@ public abstract class Master implements IConnection {
 		return false;
 	}
 
-	public boolean isDebugLog() {
-		return debugLog;
+	public void setDebugOutput(Consumer<String> debugOutput) {
+		this.debugOutput = debugOutput;
 	}
 
-	public void setDebugLog(boolean debugLog) {
-		this.debugLog = debugLog;
+	public Consumer<String> getDebugOutput() {
+		return debugOutput;
 	}
 
 	protected void debugLog(String message) {
-		if (debugLog) {
-			System.out.println(message);
+		if (debugOutput != null) {
+			debugOutput.accept(message);
 		}
 	}
 
@@ -247,10 +248,6 @@ public abstract class Master implements IConnection {
 		asduReceivedHandlerParameter = parameter;
 	}
 
-	public final void setDebug(boolean value) {
-		debugLog = value;
-	}
-
 	/**
 	 * Sets the raw message handler for receoved messages
 	 *
@@ -287,7 +284,7 @@ public abstract class Master implements IConnection {
 
 	@Override
 	public final void start() throws ConnectionException {
-
+		debugLog("Start...");
 		connectAsync();
 
 		while ((running == false) && (connectingException == null)) {
@@ -305,11 +302,14 @@ public abstract class Master implements IConnection {
 	}
 
 	private void handleConnection() {
+		debugLog("Connecting...");
 		connecting = true;
 		try {
 			beforeConnection();
 
 			running = startConnection();
+
+			debugLog("  connected: " + running);
 
 			afterConnection();
 
@@ -371,6 +371,7 @@ public abstract class Master implements IConnection {
 	protected final void loopReceiveMessage() {
 		boolean loopRunning = running;
 		while (loopRunning) {
+			debugLog("Loop waiting new message...");
 			try {
 				run();
 			} catch (IOException e1) {
@@ -388,6 +389,7 @@ public abstract class Master implements IConnection {
 
 	@Override
 	public final void stop() {
+		debugLog("Stop...");
 		if (running) {
 			running = false;
 
@@ -400,6 +402,9 @@ public abstract class Master implements IConnection {
 					e.printStackTrace();
 				}
 			}
+			debugLog("Stopped (ok)");
+		} else {
+			debugLog("Stopped (not running)");
 		}
 	}
 

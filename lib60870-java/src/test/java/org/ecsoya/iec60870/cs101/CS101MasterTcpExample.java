@@ -49,7 +49,7 @@ public class CS101MasterTcpExample {
 		llParameters.setUseSingleCharACK(false);
 
 		CS101Master master = new CS101Master(serialPort, LinkLayerMode.BALANCED, llParameters);
-		master.setDebug(false);
+		master.setDebugOutput((msg) -> System.out.println(msg));
 		master.setOwnAddress(1);
 		master.setSlaveAddress(2);
 		master.setASDUReceivedHandler(

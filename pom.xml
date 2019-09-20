@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.ecsoya.lib60870</groupId>
 	<artifactId>lib60870-java-parent</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>lib60870-java-parent</name>
 	<packaging>pom</packaging>
 
@@ -64,5 +64,6 @@
 	</build>
 	<modules>
 		<module>lib60870-java</module>
+		<module>lib60870-java-ui</module>
 	</modules>
 </project>

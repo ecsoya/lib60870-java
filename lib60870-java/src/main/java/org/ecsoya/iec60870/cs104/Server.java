@@ -127,13 +127,6 @@ public class Server extends Slave {
 		}
 	}
 
-	private void debugLog(String msg) {
-		if (debugOutput) {
-			System.out.print("CS104 SLAVE: ");
-			System.out.println(msg);
-		}
-	}
-
 	/// <summary>
 	/// Enqueues the ASDU to the transmission queue.
 	/// </summary>
@@ -197,10 +190,8 @@ public class Server extends Slave {
 	private void serverAcceptThread() {
 		running = true;
 
-		debugLog("Waiting for connections...");
-
 		while (running) {
-
+			debugLog("Waiting for connections...");
 			try {
 
 				Socket newSocket = sockerServer.accept();
@@ -228,11 +219,10 @@ public class Server extends Slave {
 
 						if (serverMode == ServerMode.SINGLE_REDUNDANCY_GROUP) {
 							connection = new ClientConnection(newSocket, securityInfo, apciParameters, alParameters,
-									this, asduQueue, debugOutput);
+									this, asduQueue, getDebugOutput());
 						} else {
 							connection = new ClientConnection(newSocket, securityInfo, apciParameters, alParameters,
-									this, new ASDUQueue(maxQueueSize, alParameters, (msg) -> debugLog(msg)),
-									debugOutput);
+									this, new ASDUQueue(maxQueueSize, alParameters, getDebugOutput()), debugOutput);
 						}
 
 						allOpenConnections.add(connection);
@@ -245,6 +235,8 @@ public class Server extends Slave {
 					} else {
 						newSocket.close();
 					}
+				} else {
+
 				}
 
 			} catch (Exception e) {
@@ -310,6 +302,7 @@ public class Server extends Slave {
 	@Override
 	public void start() throws ConnectionException {
 		SocketAddress localEp = null;
+		debugLog("Create socket server " + localHostname + ":" + localPort);
 		try {
 			InetAddress ipAddress = InetAddress.getByName(localHostname);
 			localEp = new InetSocketAddress(ipAddress, localPort);
@@ -321,6 +314,8 @@ public class Server extends Slave {
 			sockerServer = ServerSocketFactory.getDefault().createServerSocket();
 
 			sockerServer.bind(localEp);
+
+			debugLog("Socket server created at " + localHostname + ":" + localPort);
 
 			Thread acceptThread = new Thread(() -> serverAcceptThread());
 
@@ -342,6 +337,8 @@ public class Server extends Slave {
 	public void stop() {
 		running = false;
 
+		debugLog("Stop server...");
+
 		try {
 			sockerServer.close();
 
@@ -350,8 +347,10 @@ public class Server extends Slave {
 				connection.stop();
 			}
 
+			debugLog("Server stopped.");
+
 		} catch (Exception e) {
-			System.out.println(e);
+			debugLog("Socket stopped with error: " + e.getMessage());
 		}
 
 	}

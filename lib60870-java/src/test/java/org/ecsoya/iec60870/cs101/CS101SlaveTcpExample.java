@@ -78,7 +78,7 @@ public class CS101SlaveTcpExample {
 //		}
 
 		CS101Slave slave = new CS101Slave(port, llParameters);
-		slave.setDebugOutput(true);
+		slave.setDebugOutput((msg) -> System.out.println(msg));
 		slave.setLinkLayerAddress(1);
 		slave.setLinkLayerAddressOtherStation(3);
 

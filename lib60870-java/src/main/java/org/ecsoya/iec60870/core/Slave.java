@@ -16,6 +16,8 @@
  ******************************************************************************/
 package org.ecsoya.iec60870.core;
 
+import java.util.function.Consumer;
+
 import org.ecsoya.iec60870.core.file.FilesAvailable;
 import org.ecsoya.iec60870.core.handler.ASDUHandler;
 import org.ecsoya.iec60870.core.handler.ClockSynchronizationHandler;
@@ -28,7 +30,7 @@ import org.ecsoya.iec60870.core.handler.ResetProcessHandler;
 
 public abstract class Slave implements IConnection {
 
-	protected boolean debugOutput;
+	protected Consumer<String> debugOutput;
 
 	public InterrogationHandler interrogationHandler = null;
 
@@ -61,7 +63,7 @@ public abstract class Slave implements IConnection {
 		return filesAvailable;
 	}
 
-	public final boolean getDebugOutput() {
+	public final Consumer<String> getDebugOutput() {
 		return this.debugOutput;
 	}
 
@@ -100,8 +102,14 @@ public abstract class Slave implements IConnection {
 		this.counterInterrogationHandlerParameter = parameter;
 	}
 
-	public final void setDebugOutput(boolean value) {
+	public final void setDebugOutput(Consumer<String> value) {
 		debugOutput = value;
+	}
+
+	protected void debugLog(String msg) {
+		if (debugOutput != null) {
+			debugOutput.accept(msg);
+		}
 	}
 
 	public final void setDelayAcquisitionHandler(DelayAcquisitionHandler handler, Object parameter) {

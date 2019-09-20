@@ -25,6 +25,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 
 import org.ecsoya.iec60870.BufferFrame;
 import org.ecsoya.iec60870.asdu.ASDU;
@@ -128,10 +129,10 @@ public class ClientConnection implements IMasterCallable {
 
 	private boolean running = false;
 
-	private boolean debugOutput = true;
+	private Consumer<String> debugOutput;
 
 	public ClientConnection(Socket socket, TlsSecurityInformation tlsSecInfo, APCIParameters apciParameters,
-			ApplicationLayerParameters parameters, Server server, ASDUQueue asduQueue, boolean debugOutput) {
+			ApplicationLayerParameters parameters, Server server, ASDUQueue asduQueue, Consumer<String> debugOutput) {
 		connectionsCounter++;
 		connectionID = connectionsCounter;
 
@@ -286,11 +287,8 @@ public class ClientConnection implements IMasterCallable {
 	}
 
 	private void debugLog(String msg) {
-		if (debugOutput) {
-			System.out.print("CS104 SLAVE CONNECTION ");
-			System.out.print(connectionID);
-			System.out.print(": ");
-			System.out.println(msg);
+		if (debugOutput != null) {
+			debugOutput.accept("CS104 SLAVE CONNECTION " + connectionID + ":" + msg);
 		}
 	}
 
